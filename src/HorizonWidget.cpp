@@ -1,6 +1,7 @@
 #include "HorizonWidget.h"
 // std
 #include <cmath>
+#include <cstdint>
 #include <iostream>
 #include <tuple>
 // prj

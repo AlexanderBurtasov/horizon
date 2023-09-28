@@ -1,5 +1,6 @@
 #pragma once
-//std
+// std
+#include <stdlib.h>
 #include <array>
 #include <vector>
 #include <map>

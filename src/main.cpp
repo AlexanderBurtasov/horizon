@@ -64,41 +64,42 @@ void app_main()
     //DoAdc(ADC1_CHANNEL_3); // pin39
     //DoAdc(ADC1_CHANNEL_0); // pin36
     //DoRcControlTest();
-    DoRcControlTest2();
+    //DoRcControlTest2();
 
     //DoStupid();
     //DoRcControlTest();
 //    DoJoystickTest();
 //    DoI2cTest2();
-    // TFT_t dev;
-    // spi_master_init(&dev, CONFIG_MOSI_GPIO, CONFIG_SCLK_GPIO, CONFIG_CS_GPIO, CONFIG_DC_GPIO, CONFIG_RESET_GPIO, CONFIG_BL_GPIO);
-    // lcdInit(&dev, CONFIG_WIDTH, CONFIG_HEIGHT, CONFIG_OFFSETX, CONFIG_OFFSETY);
-    // lcdDrawFillRect(&dev, 0, 0, 239, 279, CYAN);
 
-    // GuideVector guide;
-    // mutex guideMutex;
+    TFT_t dev;
+    spi_master_init(&dev, CONFIG_MOSI_GPIO, CONFIG_SCLK_GPIO, CONFIG_CS_GPIO, CONFIG_DC_GPIO, CONFIG_RESET_GPIO, CONFIG_BL_GPIO);
+    lcdInit(&dev, CONFIG_WIDTH, CONFIG_HEIGHT, CONFIG_OFFSETX, CONFIG_OFFSETY);
+    lcdDrawFillRect(&dev, 0, 0, 239, 279, CYAN);
+/*
+    GuideVector guide;
+    mutex guideMutex;
 
-    // auto callFunc = [&guide, &guideMutex]()
-    // {
-    //     uint32_t tickCount = 0;
-    //     for (;;)
-    //     {
-    //         guide.x0 = 10 * sin(2*3.14 * tickCount / 100);
-    //         guide.y0 = -5 * sin(2*3.14 * tickCount / 25);
+    auto callFunc = [&guide, &guideMutex]()
+    {
+        uint32_t tickCount = 0;
+        for (;;)
+        {
+            guide.x0 = 10 * sin(2*3.14 * tickCount / 100);
+            guide.y0 = -5 * sin(2*3.14 * tickCount / 25);
 
-    //         guide.x1 = 10 * cos(2*3.14 * tickCount / 50);
-    //         guide.y1 = 8 * sin(2*3.14 * tickCount / 100);
+            guide.x1 = 10 * cos(2*3.14 * tickCount / 50);
+            guide.y1 = 8 * sin(2*3.14 * tickCount / 100);
 
-    //         ++tickCount;
-    //         this_thread::sleep_for(chrono::milliseconds(100));
-    //     }
-    // };
+            ++tickCount;
+            this_thread::sleep_for(chrono::milliseconds(100));
+        }
+    };
 
-    // thread th{callFunc};
+    thread th{callFunc};
 
-    // DoPlainView(&dev, guide, guideMutex);
-    // th.join();
-
+    DoPlainView(&dev, guide, guideMutex);
+    th.join();
+*/
     // {
     //     TimeMeter meter("Clear Screen old: ");
     //     ::lcdDrawFillRect(&dev, 0, 0, 239, 279, BLUE);
@@ -137,13 +138,13 @@ void app_main()
     //     ::DrawFillRect(&dev, 0, 128, 128, 64, BLUE);
     // }
 
-/*    HorizonWidget widget{&dev, 240, 280};
+    HorizonWidget widget{&dev, 240, 280};
     {
         TimeMeter meter("Horizon: ");
         widget.paintEvent();
     }
     std::chrono::milliseconds ms{1};
-
+/*
     Vga8x8 vga8x8{&dev};
     Vga8x16 vga8x16{&dev};
     Vga16x32 vga16x32{&dev};
@@ -158,20 +159,23 @@ void app_main()
         }
     }
 */
-    // for (size_t i = 0; i < 90; ++i)
-    // {
-    //     TimeMeter meter{("pitch angle: " + std::to_string(i) + "; update time: ").c_str()};
-    //     widget.setPitch(i);
-    //     widget.setRoll(i);
-    //     widget.paintEvent();
-    // }
-    // for (int i = 90; i > -90; --i)
-    // {
-    //     TimeMeter meter{("pitch angle: " + std::to_string(i) + "; update time: ").c_str()};
-    //     widget.setPitch(i);
-    //     widget.setRoll(i);
-    //     widget.paintEvent();
-    // }
+    for (;;)
+    {
+    for (size_t i = 0; i < 90; ++i)
+    {
+        TimeMeter meter{"ut: "};
+        widget.setPitch(i);
+        widget.setRoll(i);
+        widget.paintEvent();
+    }
+    for (int i = 90; i > -90; --i)
+    {
+        TimeMeter meter{"ut: "};
+        widget.setPitch(i);
+        widget.setRoll(i);
+        widget.paintEvent();
+    }
+    }
 }
 
 }

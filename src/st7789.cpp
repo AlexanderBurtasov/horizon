@@ -1,3 +1,5 @@
+#include "st7789.h"
+
 #include <string.h>
 #include <inttypes.h>
 #include <math.h>
@@ -8,8 +10,6 @@
 #include <driver/spi_master.h>
 #include <driver/gpio.h>
 #include "esp_log.h"
-
-#include "st7789.h"
 
 #define TAG "ST7789"
 #define	_DEBUG_ 0
@@ -123,7 +123,7 @@ void spi_master_init(TFT_t *dev, int16_t GPIO_MOSI, int16_t GPIO_SCLK, int16_t G
 }
 
 
-bool spi_master_write_byte(spi_device_handle_t SPIHandle, const uint8_t *Data, size_t DataLength)
+void spi_master_write_bytes(spi_device_handle_t SPIHandle, const uint8_t *Data, size_t DataLength)
 {
 	spi_transaction_t SPITransaction;
 
@@ -137,49 +137,60 @@ bool spi_master_write_byte(spi_device_handle_t SPIHandle, const uint8_t *Data, s
 #else
 		ret = spi_device_polling_transmit( SPIHandle, &SPITransaction );
 #endif
-		assert(result == ESP_OK); 
+//		assert(result == ESP_OK); 
 	}
-
-	return true;
 }
 
-bool spi_master_write_command(TFT_t *dev, uint8_t cmd)
+void spi_master_write_byte(spi_device_handle_t spiHandle, const uint8_t value)
 {
-	static uint8_t Byte = 0;
-	Byte = cmd;
-	gpio_set_level(static_cast<gpio_num_t>(dev->_dc), SPI_Command_Mode);
-	return spi_master_write_byte( dev->_SPIHandle, &Byte, 1 );
+  spi_transaction_t transaction =
+  {
+	.flags = SPI_TRANS_USE_TXDATA,
+	.cmd = 0x0,
+	.addr = 0x0,
+	.length = 8
+  };
+  transaction.tx_data[0] = value;
+  ::spi_device_transmit(spiHandle, &transaction);
 }
 
-bool spi_master_write_data_byte(TFT_t *dev, uint8_t data)
+void spi_master_write_command(TFT_t *dev, uint8_t cmd)
 {
-	static uint8_t Byte = 0;
-	Byte = data;
-	gpio_set_level( static_cast<gpio_num_t>(dev->_dc), SPI_Data_Mode );
-	return spi_master_write_byte(dev->_SPIHandle, &Byte, 1);
+  gpio_set_level(static_cast<gpio_num_t>(dev->_dc), SPI_Command_Mode);
+  spi_master_write_byte(dev->_SPIHandle, cmd);
 }
 
-bool spi_master_write_data_word(TFT_t *dev, uint16_t data)
+void spi_master_write_data_byte(TFT_t *dev, uint8_t data)
 {
-	static uint8_t Byte[2];
-	Byte[0] = (data >> 8) & 0xFF;
-	Byte[1] = data & 0xFF;
-	gpio_set_level(static_cast<gpio_num_t>(dev->_dc), SPI_Data_Mode);
-	return spi_master_write_byte(dev->_SPIHandle, Byte, 2);
+	gpio_set_level( static_cast<gpio_num_t>(dev->_dc), SPI_Data_Mode );	
+	spi_master_write_byte(dev->_SPIHandle, data);
 }
-
-bool spi_master_write_addr(TFT_t *dev, uint16_t addr1, uint16_t addr2)
+/*
+void spi_master_write_data_word(TFT_t *dev, uint16_t data)
 {
-	static uint8_t Byte[4];
-	Byte[0] = (addr1 >> 8) & 0xFF;
-	Byte[1] = addr1 & 0xFF;
-	Byte[2] = (addr2 >> 8) & 0xFF;
-	Byte[3] = addr2 & 0xFF;
-	gpio_set_level(static_cast<gpio_num_t>(dev->_dc), SPI_Data_Mode);
-	return spi_master_write_byte( dev->_SPIHandle, Byte, 4);
+	gpio_set_level(static_cast<gpio_num_t>(dev->_dc), SPI_Data_Mode);	
+	spi_master_write_byte(dev->_SPIHandle, data);
+}*/
+
+void spi_master_write_addr(TFT_t *dev, uint16_t addr1, uint16_t addr2)
+{
+  gpio_set_level(static_cast<gpio_num_t>(dev->_dc), SPI_Data_Mode);
+  spi_transaction_t transaction =
+  {
+    .flags = SPI_TRANS_USE_TXDATA,
+    .cmd = 0x0,
+    .addr = 0x0,
+    .length = 32
+  };
+  transaction.tx_data[0] = (addr1 >> 8) & 0xFF;
+  transaction.tx_data[1] = addr1 & 0xFF;
+  transaction.tx_data[2] = (addr2 >> 8) & 0xFF;
+  transaction.tx_data[3] = addr2 & 0xFF;
+
+  ::spi_device_transmit(dev->_SPIHandle, &transaction);
 }
 
-bool spi_master_write_color(TFT_t *dev, uint16_t color, uint16_t size)
+void spi_master_write_color(TFT_t *dev, uint16_t color, uint16_t size)
 {
 	static uint8_t Byte[1024];
 	int index = 0;
@@ -198,11 +209,12 @@ bool spi_master_write_color(TFT_t *dev, uint16_t color, uint16_t size)
 	}
 
 	gpio_set_level( static_cast<gpio_num_t>(dev->_dc), SPI_Data_Mode );
-	return spi_master_write_byte(dev->_SPIHandle, Byte, size*2);
+	
+	spi_master_write_bytes(dev->_SPIHandle, Byte, size*2);
 }
 
 // Add 202001
-bool spi_master_write_colors(TFT_t *dev, uint16_t *colors, uint16_t size)
+void spi_master_write_colors(TFT_t *dev, uint16_t *colors, uint16_t size)
 {
 	static uint8_t Byte[1024];
 	int index = 0;
@@ -210,8 +222,9 @@ bool spi_master_write_colors(TFT_t *dev, uint16_t *colors, uint16_t size)
 		Byte[index++] = (colors[i] >> 8) & 0xFF;
 		Byte[index++] = colors[i] & 0xFF;
 	}
-	gpio_set_level(static_cast<gpio_num_t>(dev->_dc), SPI_Data_Mode );
-	return spi_master_write_byte(dev->_SPIHandle, Byte, size*2);
+	gpio_set_level(static_cast<gpio_num_t>(dev->_dc), SPI_Data_Mode);
+	
+	spi_master_write_bytes(dev->_SPIHandle, Byte, size*2);
 }
 
 void delayMS(int ms)
@@ -277,6 +290,7 @@ void lcdInit(TFT_t *dev, int width, int height, int offsetx, int offsety)
 // x:X coordinate
 // y:Y coordinate
 // color:color
+/*
 void lcdDrawPixel(TFT_t *dev, uint16_t x, uint16_t y, uint16_t color)
 {
 	if (x >= dev->_width) return;
@@ -292,7 +306,7 @@ void lcdDrawPixel(TFT_t *dev, uint16_t x, uint16_t y, uint16_t color)
 	spi_master_write_command(dev, 0x2C);	//	Memory Write
 	spi_master_write_data_word(dev, color);
 }
-
+*/
 void lcdDrawPixel(TFT_t *dev, uint16_t x, uint16_t y, uint8_t width, uint16_t color)
 {
 	lcdDrawPixel(dev, x, y-1, color);
