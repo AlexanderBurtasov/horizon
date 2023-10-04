@@ -51,13 +51,18 @@ void DoRcControlTest();
 void DoRcControlTest2();
 void DoStupid();
 void DoAdc(adc1_channel_t adcEnum);
+void DoTftTest();
+void DoTftTestOld();
 
 extern "C"
 {
 
 void app_main() 
 {
-    cout << "Hells Bells!_1" << endl;
+  cout << "Hells Bells!" << endl;
+
+  DoTftTest();
+  //DoTftTestOld();
 
     //DoAdc(ADC1_CHANNEL_7); // pin35
     //DoAdc(ADC1_CHANNEL_6); // pin34
@@ -71,10 +76,10 @@ void app_main()
 //    DoJoystickTest();
 //    DoI2cTest2();
 
-    TFT_t dev;
-    spi_master_init(&dev, CONFIG_MOSI_GPIO, CONFIG_SCLK_GPIO, CONFIG_CS_GPIO, CONFIG_DC_GPIO, CONFIG_RESET_GPIO, CONFIG_BL_GPIO);
-    lcdInit(&dev, CONFIG_WIDTH, CONFIG_HEIGHT, CONFIG_OFFSETX, CONFIG_OFFSETY);
-    lcdDrawFillRect(&dev, 0, 0, 239, 279, CYAN);
+//    TFT_t dev;
+//    spi_master_init(&dev, CONFIG_MOSI_GPIO, CONFIG_SCLK_GPIO, CONFIG_CS_GPIO, CONFIG_DC_GPIO, CONFIG_RESET_GPIO, CONFIG_BL_GPIO);
+//    lcdInit(&dev, CONFIG_WIDTH, CONFIG_HEIGHT, CONFIG_OFFSETX, CONFIG_OFFSETY);
+//    lcdDrawFillRect(&dev, 0, 0, 239, 279, CYAN);
 /*
     GuideVector guide;
     mutex guideMutex;
@@ -138,12 +143,12 @@ void app_main()
     //     ::DrawFillRect(&dev, 0, 128, 128, 64, BLUE);
     // }
 
-    HorizonWidget widget{&dev, 240, 280};
-    {
-        TimeMeter meter("Horizon: ");
-        widget.paintEvent();
-    }
-    std::chrono::milliseconds ms{1};
+    // HorizonWidget widget{&dev, 240, 280};
+    // {
+    //     TimeMeter meter("Horizon: ");
+    //     widget.paintEvent();
+    // }
+    // std::chrono::milliseconds ms{1};
 /*
     Vga8x8 vga8x8{&dev};
     Vga8x16 vga8x16{&dev};
@@ -159,23 +164,23 @@ void app_main()
         }
     }
 */
-    for (;;)
-    {
-    for (size_t i = 0; i < 90; ++i)
-    {
-        TimeMeter meter{"ut: "};
-        widget.setPitch(i);
-        widget.setRoll(i);
-        widget.paintEvent();
-    }
-    for (int i = 90; i > -90; --i)
-    {
-        TimeMeter meter{"ut: "};
-        widget.setPitch(i);
-        widget.setRoll(i);
-        widget.paintEvent();
-    }
-    }
+    // for (;;)
+    // {
+    // for (size_t i = 0; i < 90; ++i)
+    // {
+    //     TimeMeter meter{"ut: "};
+    //     widget.setPitch(i);
+    //     widget.setRoll(i);
+    //     widget.paintEvent();
+    // }
+    // for (int i = 90; i > -90; --i)
+    // {
+    //     TimeMeter meter{"ut: "};
+    //     widget.setPitch(i);
+    //     widget.setRoll(i);
+    //     widget.paintEvent();
+    // }
+    // }
 }
 
 }

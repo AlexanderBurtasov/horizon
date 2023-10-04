@@ -1,74 +1,84 @@
 #include "SpiBus.h"
-/*
-#pragma once
-
-#include "driver/spi_master.h"
-
-class SpiBus
-{
-public:
-  SpiBus(int aClockPin, int aMosiPin, int aMisoPin);
-  uint8_t TransferByte(uint8_t byte);
-
-  SpiBus(const SpiBus &) = delete;
-  SpiBus &operator=(const SpiBus &) = delete;
-  SpiBus(SpiBus &&) = delete;
-  SpiBus &operator=(SpiBus &&) = delete;
-
-private:
-  spi_device_handle_t m_spiHandle = {};
-  spi_bus_config_t m_spiConfig = {};
-  spi_device_interface_config_t m_deviceConfig = {};
-//-----------------------------------------------------------------------------------------------
-}; // class SpiBus
-//-----------------------------------------------------------------------------------------------
-*/
+// std
+#include <iostream>
+#include <memory.h>
+// esp-idf
+#include <driver/gpio.h>
 
 SpiBus::SpiBus(int clockPin, int mosiPin, int misoPin, int csPin, int frequencyHz)
 {
-//  m_spiConfig = { aMosiPin, aMisoPin, aClockPin, -1, -1, 4096, 0x0, 0x0 };
-  m_busConfig = 
+  //
   {
-    .mosi_io_num = mosiPin,
-    .miso_io_num = misoPin,
-    .sclk_io_num = clockPin,
-    .quadwp_io_num = -1,
-		.quadhd_io_num = -1,
-		.max_transfer_sz = 0,
-		.flags = 0
-  };
+    ::gpio_reset_pin(static_cast<gpio_num_t>(csPin));
+    ::gpio_set_direction(static_cast<gpio_num_t>(csPin), GPIO_MODE_OUTPUT);
+    ::gpio_set_level(static_cast<gpio_num_t>(csPin), 0);
+  }
 
-  m_deviceConfig =
+  ::memset(&m_busConfig, 0, sizeof(m_busConfig));
+  m_busConfig.mosi_io_num = mosiPin;
+  m_busConfig.miso_io_num = /*misoPin*/-1;
+  m_busConfig.sclk_io_num = clockPin;
+  m_busConfig.quadwp_io_num = -1;
+  m_busConfig.quadhd_io_num = -1;
+  m_busConfig.max_transfer_sz = 0;
+  m_busConfig.flags = 0;
+
   {
-    .command_bits = 0,
-    .address_bits = 0,
-    .dummy_bits = 0,
-	  .mode = 2,
-    .clock_source = static_cast<spi_clock_source_t>(0),
-    .duty_cycle_pos = 0,
-    .cs_ena_pretrans = 0,
-	  .clock_speed_hz = frequencyHz,
-	  .input_delay_ns = 0,
-    .spics_io_num = csPin,
-	  .flags = SPI_DEVICE_NO_DUMMY,
-    .queue_size = 0,
-    .pre_cb = 0,
-    .post_cb = 0
-  };
+    const auto status = ::spi_bus_initialize(HSPI_HOST, &m_busConfig, SPI_DMA_CH_AUTO);
+    if (ESP_OK == status)
+    {
+      std::cout << "SPI init success" << std::endl;
+    }
+    else
+      std::cout << "SPI init fail" << std::endl;
+  }
 
-  auto status = ::spi_bus_initialize(HSPI_HOST, &m_busConfig, 1);
-  // if (ESP_OK == status)
-  //   cout << "SPI init success" << endl;
-  // else
-  //   cout << "SPI init fail" << endl;
+  ::memset(&m_deviceConfig, 0, sizeof(m_deviceConfig));
+	m_deviceConfig.clock_speed_hz = frequencyHz;
+	m_deviceConfig.queue_size = 7;
+	m_deviceConfig.mode = 2;
+	m_deviceConfig.flags = SPI_DEVICE_NO_DUMMY;
+  m_deviceConfig.spics_io_num = csPin;
 
-  status = ::spi_bus_add_device(HSPI_HOST, &m_deviceConfig, &m_spiHandle);
-  // if (ESP_OK == status)
-  //   cout << "device success" << endl;
-  // else
-  //   cout << "device fail" << endl;
+  {
+    const auto status = ::spi_bus_add_device(HSPI_HOST, &m_deviceConfig, &m_spiHandle);
+    if (ESP_OK == status)
+      std::cout << "device success" << std::endl;
+     else
+       std::cout << "device fail" << std::endl;
+  }
 }
 
-void SpiBus::TransferByte(uint8_t byte)
+void SpiBus::TransferIntValue(void *ptr, size_t length)
 {
+    spi_transaction_t transaction =
+    {
+      .flags = SPI_TRANS_USE_TXDATA,
+      .cmd = 0x0,
+      .addr = 0x0,
+      .length = 8 * length
+    };
+    ::memcpy(transaction.tx_data, ptr, length);
+    ::spi_device_transmit(m_spiHandle, &transaction);
+}
+
+void SpiBus::TransferData(const uint8_t *const bytes, size_t length)
+{
+  spi_transaction_t transaction =
+  {
+    .flags = 0x0,
+    .cmd = 0x0,
+    .addr = 0x0,
+    .length = 8 * length,
+    .rxlength = 0,
+    .user = nullptr,
+    .tx_buffer = bytes,
+    .rx_buffer = nullptr
+  };
+
+  const auto status = ::spi_device_transmit(m_spiHandle, &transaction);
+  if (ESP_OK != status)
+  {
+    std::cout << "TransferData unsuccess" << std::endl;
+  }
 }

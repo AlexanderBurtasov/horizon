@@ -188,6 +188,8 @@ void spi_master_write_addr(TFT_t *dev, uint16_t addr1, uint16_t addr2)
   transaction.tx_data[3] = addr2 & 0xFF;
 
   ::spi_device_transmit(dev->_SPIHandle, &transaction);
+
+  std::cout << "addr: " << std::hex << addr1 << ' ' << addr2 << std::endl;
 }
 
 void spi_master_write_color(TFT_t *dev, uint16_t color, uint16_t size)
@@ -281,7 +283,7 @@ void lcdInit(TFT_t *dev, int width, int height, int offsetx, int offsety)
 
 	if (dev->_bl >= 0)
 	{
-		gpio_set_level(static_cast<gpio_num_t>(dev->_bl), 1 );
+		gpio_set_level(static_cast<gpio_num_t>(dev->_bl), 1);
 	}
 }
 
@@ -402,6 +404,12 @@ void DrawFillRect(TFT_t *dev, uint16_t topX, uint16_t topY, uint16_t width, uint
 	uint32_t byteCount = width * height * 2;
 	const uint16_t fullCount = byteCount / sizeof(tmpBuf);
 	//printf("full count: %u\n", fullCount);
+    uint8_t *ptr = tmpBuf;
+    for (uint16_t j = 0; j < 512; ++j)
+    {
+      *(ptr++) = w0;
+      *(ptr++) = w1;
+    }
 
 	for (uint16_t i = 0; i < fullCount; ++i)
 	{
@@ -422,12 +430,12 @@ void DrawFillRect(TFT_t *dev, uint16_t topX, uint16_t topY, uint16_t width, uint
 	//printf("rest count: %u\n", restCount);
 	if (restCount)
 	{
-		uint8_t *ptr = tmpBuf;
-		for (uint16_t j = 0; j < restCount / 2; ++j)
-		{
-			*(ptr++) = w0;
-			*(ptr++) = w1;
-		}
+		// uint8_t *ptr = tmpBuf;
+		// for (uint16_t j = 0; j < restCount / 2; ++j)
+		// {
+		// 	*(ptr++) = w0;
+		// 	*(ptr++) = w1;
+		// }
 		memset(&spiTransaction, 0, sizeof(spi_transaction_t));
 		spiTransaction.tx_buffer = tmpBuf;
 		spiTransaction.length = restCount * 8;
