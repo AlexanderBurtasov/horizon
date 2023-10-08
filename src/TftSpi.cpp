@@ -59,18 +59,127 @@ void TftSpi::PutPixel(uint16_t x, uint16_t y, uint16_t color)
   WriteData(color);
 }
 
-void TftSpi::DrawLine(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color)
+void TftSpi::DrawLinePixel(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color)
 {
+	/* distance between two points */
+  const uint16_t dx = ( x2 > x1 ) ? x2 - x1 : x1 - x2;
+  const uint16_t dy = ( y2 > y1 ) ? y2 - y1 : y1 - y2;
 
+  /* direction of two point */
+  const int8_t sx = ( x2 > x1 ) ? 1 : -1;
+  const int8_t sy = ( y2 > y1 ) ? 1 : -1;
+
+  if (dx > dy)
+  {
+    int16_t E = -dx;
+    for (uint16_t i = 0; i <= dx; ++i)
+    {
+      PutPixel(x1, y1, color);
+			x1 += sx;
+			E += 2 * dy;
+			if ( E >= 0 )
+			{
+				y1 += sy;
+				E -= 2 * dx;
+			}
+		}
+	}
+	else
+	{
+		int16_t E = -dy;
+		for (uint16_t i = 0; i <= dy; ++i)
+		{
+      PutPixel(x1, y1, color);
+			y1 += sy;
+			E += 2 * dx;
+			if (E >= 0)
+			{
+				x1 += sx;
+				E -= 2 * dy;
+			}
+		}
+	}
+}
+
+void TftSpi::DrawLineRect(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color)
+{
+  /* distance between two points */
+  const uint16_t dx = (x2 > x1) ? x2 - x1 : x1 - x2;
+  const uint16_t dy = (y2 > y1) ? y2 - y1 : y1 - y2;
+
+  /* direction of two point */
+  const int8_t sx = (x2 > x1) ? 1 : -1;
+  const int8_t sy = (y2 > y1) ? 1 : -1;
+
+  /* inclination < 1 */
+  if (dx > dy)
+  {
+    int16_t E = -dx;
+    int16_t width = 0;
+    for (uint16_t i = 0; i <= dx; ++i)
+    {
+      width += sx;
+      E += 2 * dy;
+      if (E >= 0)
+      {
+        if (width > 0)
+        {
+          FillRect(x1, y1-1, width, 1, color);
+        }
+        else
+        {
+          FillRect(x1 + width, y1-1, -width, 1, color);
+        }
+        y1 += sy;
+        x1 += width;
+        width = 0;
+        E -= 2 * dx;
+      }
+    }
+    if (width != 0)
+    {
+			if (width > 0)
+       	FillRect(x1, y1, width, 1, color);
+			else
+				FillRect(x1 + width, y1, -width, 1, color);
+    }
+  }
+  else // inclination >= 1
+  {
+    int E = -dy;
+    int height = 0;
+    for (uint16_t i = 0; i <= dy; i++)
+    {
+      height += sy;
+      E += 2 * dx;
+      if (E >= 0)
+      {
+        if (height > 0)
+        {
+          FillRect(x1, y1, 1, height, color);
+        }
+        else
+        {
+          FillRect(x1, y1+height, 1, -height, color);
+        }
+        x1 += sx;
+        y1 += height;
+        height = 0;
+        E -= 2 * dy;
+      }
+    }
+    if (height != 0)
+    {
+		  if (height > 0)
+       	FillRect(x1, y1, 1, height, color);
+			else
+				FillRect(x1, y1+height, 1, -height, color);
+    }
+  }
 }
 
 void TftSpi::FillRect(uint16_t topX, uint16_t topY, uint16_t width, uint16_t height, uint16_t color)
 {
-//   if (topX + width > m_width || topY + height > m_height)
-//   {
-//     return;
-//   }
-
   uint16_t _x1 = topX + m_offsetX;
   uint16_t _x2 = _x1 + width - 1;
   uint16_t _y1 = topY + m_offsetY;
@@ -90,26 +199,23 @@ void TftSpi::FillRect(uint16_t topX, uint16_t topY, uint16_t width, uint16_t hei
   uint32_t byteCount = width * height * 2;
   const uint16_t fullCount = byteCount / sizeof(tmpBuf);
 
+  const uint32_t restCount = byteCount - fullCount * sizeof(tmpBuf);
+  uint16_t bufSize = fullCount ? sizeof(tmpBuf) / 2 : restCount / 2; 
+
+  uint8_t *ptr = tmpBuf;
+  for (uint16_t j = 0; j < bufSize; ++j)
+  {
+    *(ptr++) = w0;
+    *(ptr++) = w1;
+  }
+
   for (uint16_t i = 0; i < fullCount; ++i)
   {
-    uint8_t *ptr = tmpBuf;
-    for (uint16_t j = 0; j < 512; ++j)
-    {
-      *(ptr++) = w0;
-      *(ptr++) = w1;
-    }
     m_rSpiBus.TransferData(tmpBuf, sizeof(tmpBuf));
   }
-	
-  const uint32_t restCount = byteCount - fullCount * sizeof(tmpBuf);
+
   if (restCount)
   {
-    uint8_t *ptr = tmpBuf;
-    for (uint16_t j = 0; j < restCount / 2; ++j)
-    {
-      *(ptr++) = w0;
-      *(ptr++) = w1;
-    }
     m_rSpiBus.TransferData(tmpBuf, restCount);
   }
 }

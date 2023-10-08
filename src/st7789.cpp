@@ -188,8 +188,6 @@ void spi_master_write_addr(TFT_t *dev, uint16_t addr1, uint16_t addr2)
   transaction.tx_data[3] = addr2 & 0xFF;
 
   ::spi_device_transmit(dev->_SPIHandle, &transaction);
-
-  std::cout << "addr: " << std::hex << addr1 << ' ' << addr2 << std::endl;
 }
 
 void spi_master_write_color(TFT_t *dev, uint16_t color, uint16_t size)

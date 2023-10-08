@@ -16,7 +16,7 @@ SpiBus::SpiBus(int clockPin, int mosiPin, int misoPin, int csPin, int frequencyH
 
   ::memset(&m_busConfig, 0, sizeof(m_busConfig));
   m_busConfig.mosi_io_num = mosiPin;
-  m_busConfig.miso_io_num = /*misoPin*/-1;
+  m_busConfig.miso_io_num = misoPin;
   m_busConfig.sclk_io_num = clockPin;
   m_busConfig.quadwp_io_num = -1;
   m_busConfig.quadhd_io_num = -1;

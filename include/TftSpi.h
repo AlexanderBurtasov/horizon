@@ -12,7 +12,8 @@ public:
     , uint16_t width, uint16_t height);
 
   void PutPixel(uint16_t x, uint16_t y, uint16_t color);
-  void DrawLine(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color);
+  void DrawLinePixel(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color);
+  void DrawLineRect(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color);
   void FillRect(uint16_t x0, uint16_t y0, uint16_t width, uint16_t height, uint16_t color);
 
   static uint16_t ColorRgb(uint8_t red, uint8_t green, uint8_t blue);
