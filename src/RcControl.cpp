@@ -124,34 +124,34 @@ void DoRcControlTest()
 
 void DoStupid()
 {
-  TFT_t dev;
-  spi_master_init(&dev, CONFIG_MOSI_GPIO, CONFIG_SCLK_GPIO, CONFIG_CS_GPIO, CONFIG_DC_GPIO, CONFIG_RESET_GPIO, CONFIG_BL_GPIO);
-  lcdInit(&dev, cConfigWidth, cConfigHeight, CONFIG_OFFSETX, CONFIG_OFFSETY);
-  lcdDrawFillRect(&dev, 0, 0, 239, 279, CYAN);
+  // TFT_t dev;
+  // spi_master_init(&dev, CONFIG_MOSI_GPIO, CONFIG_SCLK_GPIO, CONFIG_CS_GPIO, CONFIG_DC_GPIO, CONFIG_RESET_GPIO, CONFIG_BL_GPIO);
+  // lcdInit(&dev, cConfigWidth, cConfigHeight, CONFIG_OFFSETX, CONFIG_OFFSETY);
+  // lcdDrawFillRect(&dev, 0, 0, 239, 279, CYAN);
 
-  Vga16x32 vga16x32{&dev};
-  auto *line0 = new TextItem{20, 40, &vga16x32, 3, WHITE, BLACK};
-  auto *line1 = new TextItem{20, 70, &vga16x32, 3, WHITE, BLACK};
-  auto *line2 = new TextItem{20, 110, &vga16x32, 3, WHITE, BLACK};
-  auto *line3 = new TextItem{20, 140, &vga16x32, 3, WHITE, BLACK};
-  line0->Update("x0: ", 4);
-  line1->Update("y0: ", 4);
-  line2->Update("x1: ", 4);
-  line3->Update("y1: ", 4);
+  // Vga16x32 vga16x32{&dev};
+  // auto *line0 = new TextItem{20, 40, &vga16x32, 3, WHITE, BLACK};
+  // auto *line1 = new TextItem{20, 70, &vga16x32, 3, WHITE, BLACK};
+  // auto *line2 = new TextItem{20, 110, &vga16x32, 3, WHITE, BLACK};
+  // auto *line3 = new TextItem{20, 140, &vga16x32, 3, WHITE, BLACK};
+  // line0->Update("x0: ", 4);
+  // line1->Update("y0: ", 4);
+  // line2->Update("x1: ", 4);
+  // line3->Update("y1: ", 4);
 
-  vector<IUiItem *> items = {line0, line1, line2, line3};
+  // vector<IUiItem *> items = {line0, line1, line2, line3};
 
-  for (;;)
-  {
-    {
-      TimeMeter meter{"update time: "};
-      for (const auto it : items)
-      {
-          it->Draw();
-      }
-    }
-    std::this_thread::sleep_for(cDisplayUpdateInterval);
-  }
+  // for (;;)
+  // {
+  //   {
+  //     TimeMeter meter{"update time: "};
+  //     for (const auto it : items)
+  //     {
+  //         it->Draw();
+  //     }
+  //   }
+  //   std::this_thread::sleep_for(cDisplayUpdateInterval);
+  // }
 }
 
 namespace
@@ -168,54 +168,54 @@ const char *const cFmt = "%3d";
 
 void DoPlainView(TFT_t *dev, GuideVector &rGuide, mutex &rMutex)
 {
-  Vga16x32 vga16x32{dev};
-  auto *line0 = new TextItem{20, 40, &vga16x32, 4, WHITE, BLACK};
-  auto *line1 = new TextItem{20, 70, &vga16x32, 4, WHITE, BLACK};
-  auto *line2 = new TextItem{20, 110, &vga16x32, 4, WHITE, BLACK};
-  auto *line3 = new TextItem{20, 140, &vga16x32, 4, WHITE, BLACK};
+  // Vga16x32 vga16x32{};
+  // auto *line0 = new TextItem{20, 40, &vga16x32, 4, WHITE, BLACK};
+  // auto *line1 = new TextItem{20, 70, &vga16x32, 4, WHITE, BLACK};
+  // auto *line2 = new TextItem{20, 110, &vga16x32, 4, WHITE, BLACK};
+  // auto *line3 = new TextItem{20, 140, &vga16x32, 4, WHITE, BLACK};
 
-  auto *valueLine0 = new IntItem{70, 40, &vga16x32, 3, cFmt, WHITE, BLACK};
-  auto *valueLine1 = new IntItem{70, 70, &vga16x32, 3, cFmt, WHITE, BLACK};
-  auto *valueLine2 = new IntItem{70, 110, &vga16x32, 3, cFmt, WHITE, BLACK};
-  auto *valueLine3 = new IntItem{70, 140, &vga16x32, 3, cFmt, WHITE, BLACK};
+  // auto *valueLine0 = new IntItem{70, 40, &vga16x32, 3, cFmt, WHITE, BLACK};
+  // auto *valueLine1 = new IntItem{70, 70, &vga16x32, 3, cFmt, WHITE, BLACK};
+  // auto *valueLine2 = new IntItem{70, 110, &vga16x32, 3, cFmt, WHITE, BLACK};
+  // auto *valueLine3 = new IntItem{70, 140, &vga16x32, 3, cFmt, WHITE, BLACK};
 
-  line0->Update("x0: ", 4);
-  line1->Update("y0: ", 4);
-  line2->Update("x1: ", 4);
-  line3->Update("y1: ", 4);
+  // line0->Update("x0: ", 4);
+  // line1->Update("y0: ", 4);
+  // line2->Update("x1: ", 4);
+  // line3->Update("y1: ", 4);
 
-  vector<IUiItem *> items = {line0, line1, line2, line3
-      , valueLine0, valueLine1, valueLine2, valueLine3 };
+  // vector<IUiItem *> items = {line0, line1, line2, line3
+  //     , valueLine0, valueLine1, valueLine2, valueLine3 };
 
-  GuideVector current{};
-  {
-    lock_guard<mutex> lock{rMutex};
-    current = rGuide;
-  }
-  valueLine0->UpdateForce(current.x0);
-  valueLine1->UpdateForce(current.y0);
-  valueLine2->UpdateForce(current.x1);
-  valueLine3->UpdateForce(current.y1);
+  // GuideVector current{};
+  // {
+  //   lock_guard<mutex> lock{rMutex};
+  //   current = rGuide;
+  // }
+  // valueLine0->UpdateForce(current.x0);
+  // valueLine1->UpdateForce(current.y0);
+  // valueLine2->UpdateForce(current.x1);
+  // valueLine3->UpdateForce(current.y1);
 
-  for (;;)
-  {
-    std::this_thread::sleep_for(cDisplayUpdateInterval);
-    {
-      lock_guard<mutex> lock{rMutex};
-      current = rGuide;
-    }
-    valueLine0->Update(current.x0);
-    valueLine1->Update(current.y0);
-    valueLine2->Update(current.x1);
-    valueLine3->Update(current.y1);
+  // for (;;)
+  // {
+  //   std::this_thread::sleep_for(cDisplayUpdateInterval);
+  //   {
+  //     lock_guard<mutex> lock{rMutex};
+  //     current = rGuide;
+  //   }
+  //   valueLine0->Update(current.x0);
+  //   valueLine1->Update(current.y0);
+  //   valueLine2->Update(current.x1);
+  //   valueLine3->Update(current.y1);
      
-    {
-      // TimeMeter meter{"update time: "};
-      for (const auto it : items)
-      {
-        it->Draw();
-      }
-    }
-  }
+  //   {
+  //     // TimeMeter meter{"update time: "};
+  //     for (const auto it : items)
+  //     {
+  //       it->Draw();
+  //     }
+  //   }
+  // }
 }
 } // namespace

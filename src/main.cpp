@@ -51,8 +51,10 @@ void DoRcControlTest();
 void DoRcControlTest2();
 void DoStupid();
 void DoAdc(adc1_channel_t adcEnum);
+
 void DoTftTest();
-void DoTftTestOld();
+void DoReceiverTest();
+void DoTransmitterTest();
 
 extern "C"
 {
@@ -60,8 +62,10 @@ extern "C"
 void app_main() 
 {
   cout << "Hells Bells!" << endl;
+  //DoReceiverTest();
+  DoTransmitterTest();
 
-  DoTftTest();
+  //DoTftTest();
   //DoTftTestOld();
 
     //DoAdc(ADC1_CHANNEL_7); // pin35
@@ -362,122 +366,4 @@ static esp_err_t i2c_master_read_slave_reg(i2c_port_t i2c_num, uint8_t i2c_addr,
     esp_err_t ret = i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_PERIOD_MS);
     i2c_cmd_link_delete(cmd);
     return ret;
-}
-
-void DoPlainView(TFT_t *dev, GuideVector &rGuide, mutex &rMutex)
-{
-    Vga16x32 vga16x32{dev};
-    vga16x32.DisplayText("x0: ", 20, 40, WHITE, BLACK);
-    vga16x32.DisplayText("y0: ", 20, 70, WHITE, BLACK);
-    vga16x32.DisplayText("x1: ", 20, 110, WHITE, BLACK);
-    vga16x32.DisplayText("y1: ", 20, 140, WHITE, BLACK);
-
-    auto callLambda = [dev, &rGuide, &rMutex, &vga16x32]()
-    {
-    vector<bool> updateItems;
-    updateItems.resize(4);
-    GuideVector current{-127, -127, -127, -127};
-
-    for (;;)
-    {
-        {
-            lock_guard<mutex> lock{rMutex};
-            if (current.x0 != rGuide.x0)
-            {
-                updateItems[0] = true;
-                current.x0 = rGuide.x0;
-            }
-            else
-            {
-                updateItems[0] = false;
-            }
-
-            if (current.y0 != rGuide.y0)
-            {
-                updateItems[1] = true;
-                current.y0 = rGuide.y0;
-            }
-            else
-            {
-                updateItems[1] = false;
-            }
-
-            if (current.x1 != rGuide.x1)
-            {
-                updateItems[2] = true;
-                current.x1 = rGuide.x1;
-            }
-            else
-            {
-                updateItems[2] = false;
-            }
-
-            if (current.y1 != rGuide.y1)
-            {
-                updateItems[3] = true;
-                current.y1 = rGuide.y1;
-            }
-            else
-            {
-                updateItems[3] = false;
-            }
-        }
-
-        if (updateItems[0])
-        {
-            vga16x32.DisplayText(std::to_string(current.x0).c_str(), 70, 40, WHITE, YELLOW);
-        }
-        if (updateItems[1])
-        {
-            vga16x32.DisplayText(std::to_string(current.y0).c_str(), 70, 70, WHITE, YELLOW);
-        }
-        if (updateItems[2])
-        {
-            vga16x32.DisplayText(std::to_string(current.x1).c_str(), 70, 110, WHITE, YELLOW);
-        }
-        if (updateItems[3])
-        {
-            vga16x32.DisplayText(std::to_string(current.y1).c_str(), 70, 140, WHITE, YELLOW);
-        }
-        this_thread::sleep_for(chrono::milliseconds(100));
-    }
-    };
-
-    thread th{callLambda};
-    th.join();
-}
-
-void DoFontTest(TFT_t *dev)
-{
-    Vga8x16 vga8x16{dev};
-
-    TimeMeter meter("Font 8x16: ");
-    uint16_t left = 15;
-    uint16_t top = 20;
-    uint16_t pos = 0;
-    for (uint16_t sym = 0x0; sym <= 0xff; ++sym)
-    {
-        vga8x16.DisplayChar(sym, left + pos * 10, top, BLACK, YELLOW);
-        ++pos;
-        if (pos == 20)
-        {
-            pos = 0;
-            top += 20;
-        }
-        if (top >= 260)
-        {
-            top = 20;
-        }
-    }
-}
-
-void DoColorTest(TFT_t *dev, const std::vector<uint16_t> &colors, uint16_t width, uint16_t height)
-{
-    uint16_t y = 0;
-    uint16_t x = 0;
-    for (const auto color : colors)
-    {
-        ::DrawFillRect(dev, x, y, width, height, color);
-        y += height + 1;
-    }
 }
