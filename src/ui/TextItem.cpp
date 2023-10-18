@@ -21,12 +21,12 @@ TextItem::TextItem(uint16_t leftX, uint16_t leftY, VgaFont *pFont, uint16_t bufS
 void TextItem::Draw() const
 {
   uint16_t tmpLeft = m_leftX;
-  const auto fontWidth = m_pFont->GetWidth();
+  const auto &[fontWidth, _] = m_pFont->GetDim();
   for (uint16_t i = 0; i < m_bufSize; ++i)
   {
     if (m_bytes[i] != m_lastBytes[i])
     {
-      m_pFont->DisplayChar(m_bytes[i], tmpLeft, m_leftY, m_fontColor, m_backColor);
+      //m_pFont->DisplayChar(m_bytes[i], tmpLeft, m_leftY, m_fontColor, m_backColor);
       m_lastBytes[i] = m_bytes[i];
     }
     tmpLeft += fontWidth;
@@ -66,12 +66,12 @@ void IntItem::Draw() const
   }
 
   uint16_t tmpLeft = m_leftX;
-  const auto fontWidth = m_pFont->GetWidth();
+  const auto [fontWidth, _] = m_pFont->GetDim();
   for (uint16_t i = 0; i < m_width; ++i)
   {
     if (m_bytes[i] != m_lastBytes[i])
     {
-      m_pFont->DisplayChar(m_bytes[i], tmpLeft, m_leftY, m_fontColor, m_backColor);
+      //m_pFont->DisplayChar(m_bytes[i], tmpLeft, m_leftY, m_fontColor, m_backColor);
       m_lastBytes[i] = m_bytes[i];
     }
     tmpLeft += fontWidth;

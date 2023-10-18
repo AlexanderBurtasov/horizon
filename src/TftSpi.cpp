@@ -1,51 +1,54 @@
 #include "TftSpi.h"
 // std
-#include <iostream>
 #include <thread>
 // esp-idf
 #include <driver/gpio.h>
 // prj
-#include "SpiBus.h"
+#include "SpiHelper.h"
+#include "VgaFont.h"
 
-TftSpi::TftSpi(SpiBus &rSpiBus
+TftSpi::TftSpi(SpiHelper &rSpiHelper
   , int16_t dcPinNum, int16_t resetPinNum, int16_t blPinNum
   , uint16_t width, uint16_t height)
-    : m_rSpiBus(rSpiBus)
-    , m_dcPinNum{dcPinNum}
-    , m_resetPinNum{resetPinNum}
-    , m_blPinNum{blPinNum}
+    : m_rSpiHelper(rSpiHelper)
+    , m_dcPin{static_cast<gpio_num_t>(dcPinNum)}
+    , m_resetPin{static_cast<gpio_num_t>(resetPinNum)}
+    , m_blPin{static_cast<gpio_num_t>(blPinNum)}
     , m_width{width}, m_height{height}
 {
-  gpio_reset_pin(static_cast<gpio_num_t>(m_dcPinNum));
-  gpio_set_direction(static_cast<gpio_num_t>(m_dcPinNum), GPIO_MODE_OUTPUT);
-  gpio_set_level(static_cast<gpio_num_t>(m_dcPinNum), 0);
+  // cs == 0 at all time
+  m_rSpiHelper.CsLow();
 
-  if (m_resetPinNum >= 0)
+  gpio_reset_pin(m_dcPin);
+  gpio_set_direction(m_dcPin, GPIO_MODE_OUTPUT);
+  gpio_set_level(m_dcPin, 0);
+
+  if (m_resetPin != GPIO_NUM_NC)
   {
-    ::gpio_reset_pin(static_cast<gpio_num_t>(m_resetPinNum));
-    ::gpio_set_direction( static_cast<gpio_num_t>(m_resetPinNum), GPIO_MODE_OUTPUT);
+    ::gpio_reset_pin(m_resetPin);
+    ::gpio_set_direction(m_resetPin, GPIO_MODE_OUTPUT);
 
-    ::gpio_set_level(static_cast<gpio_num_t>(m_resetPinNum), 1);		
+    ::gpio_set_level(m_resetPin, 1);		
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    ::gpio_set_level(static_cast<gpio_num_t>(m_resetPinNum), 0);
+    ::gpio_set_level(m_resetPin, 0);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    ::gpio_set_level(static_cast<gpio_num_t>(m_resetPinNum), 1);
+    ::gpio_set_level(m_resetPin, 1);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 
-  if (m_blPinNum >= 0)
+  if (m_blPin != GPIO_NUM_NC)
   {
-    gpio_reset_pin(static_cast<gpio_num_t>(m_blPinNum));
-    gpio_set_direction(static_cast<gpio_num_t>(m_blPinNum), GPIO_MODE_OUTPUT);
-    gpio_set_level(static_cast<gpio_num_t>(m_blPinNum), 0);
+    gpio_reset_pin(m_blPin);
+    gpio_set_direction(m_blPin, GPIO_MODE_OUTPUT);
+    gpio_set_level(m_blPin, 0);
   }
 
   Init();
 }
 
-void TftSpi::PutPixel(uint16_t x, uint16_t y, uint16_t color)
+void TftSpi::DrawPixel(uint16_t x, uint16_t y, uint16_t color)
 {
   uint16_t _x = x + 0;
   uint16_t _y = y + m_offsetY;
@@ -59,22 +62,22 @@ void TftSpi::PutPixel(uint16_t x, uint16_t y, uint16_t color)
   WriteData(color);
 }
 
-void TftSpi::DrawLinePixel(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color)
+void TftSpi::DrawBresLine(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color)
 {
 	/* distance between two points */
-  const uint16_t dx = ( x2 > x1 ) ? x2 - x1 : x1 - x2;
-  const uint16_t dy = ( y2 > y1 ) ? y2 - y1 : y1 - y2;
+  const uint16_t dx = (x2 > x1) ? x2 - x1 : x1 - x2;
+  const uint16_t dy = (y2 > y1) ? y2 - y1 : y1 - y2;
 
   /* direction of two point */
-  const int8_t sx = ( x2 > x1 ) ? 1 : -1;
-  const int8_t sy = ( y2 > y1 ) ? 1 : -1;
+  const int8_t sx = (x2 > x1) ? 1 : -1;
+  const int8_t sy = (y2 > y1) ? 1 : -1;
 
   if (dx > dy)
   {
     int16_t E = -dx;
     for (uint16_t i = 0; i <= dx; ++i)
     {
-      PutPixel(x1, y1, color);
+      DrawPixel(x1, y1, color);
 			x1 += sx;
 			E += 2 * dy;
 			if ( E >= 0 )
@@ -89,7 +92,7 @@ void TftSpi::DrawLinePixel(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, u
 		int16_t E = -dy;
 		for (uint16_t i = 0; i <= dy; ++i)
 		{
-      PutPixel(x1, y1, color);
+      DrawPixel(x1, y1, color);
 			y1 += sy;
 			E += 2 * dx;
 			if (E >= 0)
@@ -101,84 +104,88 @@ void TftSpi::DrawLinePixel(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, u
 	}
 }
 
-void TftSpi::DrawLineRect(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color)
+void TftSpi::DrawFastBresLine(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color)
 {
+  // draw line from left side anyway
+  if (x1 > x2)
+  {
+    std::swap(x1, x2);
+    std::swap(y1, y2);
+  }
+
   /* distance between two points */
-  const uint16_t dx = (x2 > x1) ? x2 - x1 : x1 - x2;
+  const uint16_t dx = x2 - x1;
   const uint16_t dy = (y2 > y1) ? y2 - y1 : y1 - y2;
 
   /* direction of two point */
-  const int8_t sx = (x2 > x1) ? 1 : -1;
   const int8_t sy = (y2 > y1) ? 1 : -1;
 
   /* inclination < 1 */
   if (dx > dy)
   {
     int16_t E = -dx;
-    int16_t width = 0;
-    for (uint16_t i = 0; i <= dx; ++i)
+    int width = 0;
+    int currentX = x1;
+    for (uint16_t i = 0; i <= dx; i++)
     {
-      width += sx;
+      x1 += 1;
+      width += 1;
       E += 2 * dy;
       if (E >= 0)
       {
         if (width > 0)
         {
-          FillRect(x1, y1-1, width, 1, color);
-        }
-        else
-        {
-          FillRect(x1 + width, y1-1, -width, 1, color);
+          DrawFillRect(currentX, y1, width, 1, color);
         }
         y1 += sy;
-        x1 += width;
-        width = 0;
         E -= 2 * dx;
+        currentX = x1;
+        width = 0;
       }
     }
-    if (width != 0)
+    if (width > 0)
     {
-			if (width > 0)
-       	FillRect(x1, y1, width, 1, color);
-			else
-				FillRect(x1 + width, y1, -width, 1, color);
+      DrawFillRect(currentX, y1, width, 1, color);
     }
   }
-  else // inclination >= 1
+  else
   {
-    int E = -dy;
+    int16_t E = -dy;
     int height = 0;
+    int currentY = y1;
     for (uint16_t i = 0; i <= dy; i++)
     {
-      height += sy;
+      y1 += sy;
       E += 2 * dx;
+      height += sy;
       if (E >= 0)
       {
         if (height > 0)
         {
-          FillRect(x1, y1, 1, height, color);
+          DrawFillRect(x1, currentY, 1, height, color);
         }
         else
         {
-          FillRect(x1, y1+height, 1, -height, color);
+          DrawFillRect(x1, currentY + height + 1, 1, -height, color);
         }
-        x1 += sx;
-        y1 += height;
-        height = 0;
+        x1 += 1;
         E -= 2 * dy;
+        currentY = y1;
+        height = 0;
       }
     }
-    if (height != 0)
+    if (height > 0)
     {
-		  if (height > 0)
-       	FillRect(x1, y1, 1, height, color);
-			else
-				FillRect(x1, y1+height, 1, -height, color);
+      DrawFillRect(x1, currentY, 1, height, color);
+    }
+    else
+    {
+      DrawFillRect(x1, currentY + height + 1, 1, -height, color);
     }
   }
 }
 
-void TftSpi::FillRect(uint16_t topX, uint16_t topY, uint16_t width, uint16_t height, uint16_t color)
+void TftSpi::DrawFillRect(uint16_t topX, uint16_t topY, uint16_t width, uint16_t height, uint16_t color)
 {
   uint16_t _x1 = topX + m_offsetX;
   uint16_t _x2 = _x1 + width - 1;
@@ -192,9 +199,7 @@ void TftSpi::FillRect(uint16_t topX, uint16_t topY, uint16_t width, uint16_t hei
   WriteCommand(0x2C);	//	Memory Write
 
   static uint8_t tmpBuf[1024];
-  gpio_set_level(static_cast<gpio_num_t>(m_dcPinNum), 1);
-  const uint8_t w0 = (color >> 8) & 0xFF;
-  const uint8_t w1 = color & 0xFF;
+  gpio_set_level(m_dcPin, 1);
 
   uint32_t byteCount = width * height * 2;
   const uint16_t fullCount = byteCount / sizeof(tmpBuf);
@@ -202,51 +207,114 @@ void TftSpi::FillRect(uint16_t topX, uint16_t topY, uint16_t width, uint16_t hei
   const uint32_t restCount = byteCount - fullCount * sizeof(tmpBuf);
   uint16_t bufSize = fullCount ? sizeof(tmpBuf) / 2 : restCount / 2; 
 
-  uint8_t *ptr = tmpBuf;
+  uint16_t *ptr = reinterpret_cast<uint16_t *>(tmpBuf);
   for (uint16_t j = 0; j < bufSize; ++j)
   {
-    *(ptr++) = w0;
-    *(ptr++) = w1;
+    *(ptr++) = color;
   }
 
   for (uint16_t i = 0; i < fullCount; ++i)
   {
-    m_rSpiBus.TransferData(tmpBuf, sizeof(tmpBuf));
+    m_rSpiHelper.TransferData(tmpBuf, sizeof(tmpBuf));
   }
 
   if (restCount)
   {
-    m_rSpiBus.TransferData(tmpBuf, restCount);
+    m_rSpiHelper.TransferData(tmpBuf, restCount);
   }
 }
 
-uint16_t TftSpi::ColorRgb(uint8_t r,uint8_t g, uint8_t b)
+void TftSpi::DrawChar(uint16_t x0, uint16_t y0, const char symbol, const VgaFont &font, uint16_t fontColor, uint16_t backColor)
 {
-    return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
+  const auto [width, height] = font.GetDim();
+
+  uint16_t _x1 = x0 + m_offsetX;
+  uint16_t _x2 = _x1 + width - 1;
+  uint16_t _y1 = y0 + m_offsetY;
+  uint16_t _y2 = _y1 + height - 1;
+
+  WriteCommand(0x2A);	// set column(x) address
+  WriteAddress(_x1, _x2);
+  WriteCommand(0x2B);	// set Page(y) address
+  WriteAddress(_y1, _y2);
+  WriteCommand(0x2C);	//	Memory Write
+
+  gpio_set_level(m_dcPin, 1);
+  const uint16_t *pixmap = font.BuildPixmap(symbol, fontColor, backColor);
+  m_rSpiHelper.TransferData(reinterpret_cast<const uint8_t *>(pixmap), width * height * sizeof(*pixmap));
+}
+
+void TftSpi::DrawChar(uint16_t x0, uint16_t y0, const char symbol, const VgaFont &font, uint16_t fontColor)
+{
+  const auto [width, height] = font.GetDim();
+  const uint16_t *pixmap = font.BuildPixmap(symbol, fontColor, 0x0);
+
+  uint16_t pos = 0;
+  for (uint8_t i = 0; i < width; ++i)
+  {
+    for (uint8_t j = 0; j < height / 2; ++j)
+    {
+      if (0x0 != pixmap[pos])
+      {
+        DrawPixel(x0+i, y0+j, fontColor);
+      }
+      ++pos;
+    }
+  }
+}
+
+void TftSpi::DrawString(uint16_t x0, uint16_t y0, const char *const str, const VgaFont &font, uint16_t fontColor, uint16_t backColor)
+{
+  const auto [width, height] = font.GetDim();
+  const char *symbol = str;
+  while (x0 + width < m_width && y0 + height < m_height && *symbol != '\0')
+  {
+    DrawChar(x0, y0, *symbol, font, fontColor, backColor);
+    ++symbol;
+    x0 += width;
+  }
+}
+
+void TftSpi::DrawString(uint16_t x0, uint16_t y0, const char *const str, const VgaFont &font, uint16_t fontColor)
+{
+  const auto [width, height] = font.GetDim();
+  const char *symbol = str;
+  while (x0 + width < m_width && y0 + height < m_height && *symbol != '\0')
+  {
+    DrawChar(x0, y0, *symbol, font, fontColor);
+    ++symbol;
+    x0 += width;
+  }
+}
+
+uint16_t TftSpi::ColorRgb(uint8_t r, uint8_t g, uint8_t b)
+{
+  // value reversed already
+  const uint16_t v1 = (((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3));
+  return (v1 & 0xff) << 8 | v1 >> 8;
 }
 
 void TftSpi::WriteCommand(uint8_t cmd)
 {
-  ::gpio_set_level(static_cast<gpio_num_t>(m_dcPinNum), 0);
-  m_rSpiBus.TransferIntValue(&cmd, sizeof(cmd));
+  ::gpio_set_level(m_dcPin, 0);
+  m_rSpiHelper.TransferIntValue(&cmd, sizeof(cmd));
 }
 
 void TftSpi::WriteData(uint8_t value)
 {
-  ::gpio_set_level(static_cast<gpio_num_t>(m_dcPinNum), 1);
-  m_rSpiBus.TransferIntValue(&value, sizeof(value));
+  ::gpio_set_level(m_dcPin, 1);
+  m_rSpiHelper.TransferIntValue(&value, sizeof(value));
 }
 
 void TftSpi::WriteData(uint16_t value)
 {
-  ::gpio_set_level(static_cast<gpio_num_t>(m_dcPinNum), 1);
-  uint16_t v1 = ((value >> 8) & 0xff) | (value & 0xff);
-  m_rSpiBus.TransferIntValue(&v1, sizeof(v1));
+  ::gpio_set_level(m_dcPin, 1);
+  m_rSpiHelper.TransferIntValue(&value, sizeof(value));
 }
 
 void TftSpi::WriteAddress(uint16_t addr1, uint16_t addr2)
 {
-  ::gpio_set_level(static_cast<gpio_num_t>(m_dcPinNum), 1);
+  ::gpio_set_level(m_dcPin, 1);
   uint8_t value[] =
   {
     static_cast<uint8_t>((addr1 >> 8) & 0xFF),
@@ -255,7 +323,7 @@ void TftSpi::WriteAddress(uint16_t addr1, uint16_t addr2)
     static_cast<uint8_t>(addr2 & 0xFF)
   };
 
-  m_rSpiBus.TransferIntValue(value, sizeof(value));
+  m_rSpiHelper.TransferIntValue(value, sizeof(value));
 }
 
 void TftSpi::Init()
@@ -294,8 +362,8 @@ void TftSpi::Init()
   WriteCommand(0x29);	//Display ON
   std::this_thread::sleep_for(std::chrono::milliseconds(255));
 
-  if (m_blPinNum >= 0)
+  if (m_blPin != GPIO_NUM_NC)
   {
-    gpio_set_level(static_cast<gpio_num_t>(m_blPinNum), 1);
+    gpio_set_level(m_blPin, 1);
   }
 }

@@ -1,7 +1,6 @@
-#include "SpiBus.h"
+#include "SpiHelper.h"
 #include "TftSpi.h"
-#include "st7789.h"
-#include "HorizonWidget.h"
+#include "VgaFont.h"
 
 #include "utils/TimeMeter.h"
 
@@ -19,52 +18,44 @@ const int8_t cResetPin = 4;
 const int8_t cBlPin = 22;
 }
 
-#define CONFIG_OFFSETX 0
-#define CONFIG_OFFSETY 20
-
-const int cFrequencyHz = 40'000'000;
+const int cFrequencyHz = 40000000;
 
 void DoTftTest()
 {
-  SpiBus spiBus(cClkPin, cMosiPin, -1, cCsPin, cFrequencyHz);
-  TftSpi tft{spiBus, cDcPin, cResetPin, cBlPin, cWidth, cHeight};
+  SpiHelper spiHelper(SpiHelper::eHSpi, cClkPin, cMosiPin, -1, cCsPin, cFrequencyHz);
+  TftSpi tft{spiHelper, cDcPin, cResetPin, cBlPin, cWidth, cHeight};
 
-  tft.FillRect(0, 0, cWidth, cHeight, 0x0);
+  tft.DrawFillRect(0, 0, cWidth, cHeight, 0x0);
   const auto colorRed = TftSpi::ColorRgb(255, 0, 0);
   const auto colorGreen = TftSpi::ColorRgb(0, 255, 0);
+  const auto colorBlue = TftSpi::ColorRgb(0, 0, 255);
+  const auto colorYellow = TftSpi::ColorRgb(200, 200, 0);
 
-//  tft.DrawLinePixel(10, 10, 220, 220, colorRed);
-//  tft.DrawLinePixel(0, 0, 239, 240, colorRed);
+  VgaFont8x8 vga8x8;
+  VgaFont8x16 vga8x16;
+  VgaFont16x32 vga16x32;
 
+  for (int i = 0; i < cHeight; i += 1)
   {
-    TimeMeter tm{"pixel line: "};
-    for (uint16_t i = 0; i < cHeight; ++i)
-    {
-      tft.DrawLinePixel(0, 0, cWidth-1, i, colorRed);
-      tft.DrawLineRect(0, 0, cWidth-1, i, colorGreen);
-    }
+    tft.DrawFastBresLine(cWidth/2, cHeight/2, cWidth, i, colorGreen);
   }
 
+  for (int i = 0; i < cWidth; i += 1)
+  {
+    tft.DrawFastBresLine(cWidth / 2, cHeight / 2, i, cHeight, colorYellow);
+  }
 
+  for (int i = 0; i < cHeight; ++i)
+  {
+    tft.DrawFastBresLine(cWidth / 2, cHeight / 2, 0, i, colorBlue);
+  }
+
+  for (int i = 0; i < cWidth; i += 1)
+  {
+    tft.DrawFastBresLine(cWidth / 2, cHeight / 2, i, 0, colorRed);
+  }
+
+  tft.DrawString(20, 160, "Hells Bells!", vga8x16, colorRed);
 
   std::cout << "DoTftTest(): done" << std::endl;
-}
-
-void DoTftTestOld()
-{
-  TFT_t dev;
-  ::spi_master_init(&dev, cMosiPin, cClkPin, cCsPin, cDcPin, cResetPin, cBlPin);
-  ::lcdInit(&dev, cWidth, cHeight, CONFIG_OFFSETX, CONFIG_OFFSETY);
-
-  ::DrawFillRect(&dev, 0, 0, 240, 280, 0xffff);
-/*
-  HorizonWidget widget{&dev, 240, 280};
-  {
-    TimeMeter meter("Horizon: ");
-    widget.paintEvent();
-  }
-*/
-//  ::lcdDrawFillRect(&dev, 0, 0, 239, 279, RED);
-
-  std::cout << "DoTftTestOld(): done" << std::endl;
 }

@@ -1,22 +1,34 @@
 #pragma once
 // std
 #include <cstdint>
+// esp-idf
+#include "driver/gpio.h"
 
-class SpiBus;
+class SpiHelper;
+class VgaFont;
 
 class TftSpi
 {
 public:
-  TftSpi(SpiBus &rSpiBus
+  TftSpi(SpiHelper &rSpiHelper
     , int16_t dcPinNum, int16_t resetPinNum, int16_t blPinNum
     , uint16_t width, uint16_t height);
 
-  void PutPixel(uint16_t x, uint16_t y, uint16_t color);
-  void DrawLinePixel(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color);
-  void DrawLineRect(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color);
-  void FillRect(uint16_t x0, uint16_t y0, uint16_t width, uint16_t height, uint16_t color);
+  void DrawPixel(uint16_t x, uint16_t y, uint16_t color);
+  void DrawBresLine(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color);
+  void DrawFastBresLine(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color);
+  void DrawFillRect(uint16_t x0, uint16_t y0, uint16_t width, uint16_t height, uint16_t color);
+
+  void DrawChar(uint16_t x0, uint16_t y0, const char symbol, const VgaFont &font, uint16_t fontColor, uint16_t backColor);
+  void DrawChar(uint16_t x0, uint16_t y0, const char symbol, const VgaFont &font, uint16_t fontColor);
+
+  void DrawString(uint16_t x0, uint16_t y0, const char *const str, const VgaFont &font, uint16_t fontColor, uint16_t backColor);
+  void DrawString(uint16_t x0, uint16_t y0, const char *const str, const VgaFont &font, uint16_t fontColor);
 
   static uint16_t ColorRgb(uint8_t red, uint8_t green, uint8_t blue);
+
+  uint16_t GetWidth() const;
+  uint16_t GetHeight() const;
 
 protected:
   void Init();
@@ -31,10 +43,10 @@ protected:
   void WriteBytes(const uint8_t *bytes, uint16_t length);
 
 protected:
-  SpiBus &m_rSpiBus;
-  int16_t m_dcPinNum = -1;
-  int16_t m_resetPinNum = -1;
-  int16_t m_blPinNum = -1;
+  SpiHelper &m_rSpiHelper;
+  gpio_num_t m_dcPin = GPIO_NUM_NC;
+  gpio_num_t m_resetPin = GPIO_NUM_NC;
+  gpio_num_t m_blPin = GPIO_NUM_NC;
 
   // 240x280
   uint16_t m_width;
