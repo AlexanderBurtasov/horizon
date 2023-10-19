@@ -250,9 +250,9 @@ void TftSpi::DrawChar(uint16_t x0, uint16_t y0, const char symbol, const VgaFont
   const uint16_t *pixmap = font.BuildPixmap(symbol, fontColor, 0x0);
 
   uint16_t pos = 0;
-  for (uint8_t i = 0; i < width; ++i)
+  for (uint8_t j = 0; j < height; ++j)
   {
-    for (uint8_t j = 0; j < height / 2; ++j)
+    for (uint8_t i = 0; i < width; ++i)
     {
       if (0x0 != pixmap[pos])
       {
