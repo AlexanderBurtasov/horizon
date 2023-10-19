@@ -8,7 +8,7 @@
 #include "VgaFont.h"
 
 TftSpi::TftSpi(SpiHelper &rSpiHelper
-  , int16_t dcPinNum, int16_t resetPinNum, int16_t blPinNum
+  , uint8_t dcPinNum, uint8_t resetPinNum, uint8_t blPinNum
   , uint16_t width, uint16_t height)
     : m_rSpiHelper(rSpiHelper)
     , m_dcPin{static_cast<gpio_num_t>(dcPinNum)}
@@ -28,7 +28,7 @@ TftSpi::TftSpi(SpiHelper &rSpiHelper
     ::gpio_reset_pin(m_resetPin);
     ::gpio_set_direction(m_resetPin, GPIO_MODE_OUTPUT);
 
-    ::gpio_set_level(m_resetPin, 1);		
+    ::gpio_set_level(m_resetPin, 1);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     ::gpio_set_level(m_resetPin, 0);
@@ -50,21 +50,21 @@ TftSpi::TftSpi(SpiHelper &rSpiHelper
 
 void TftSpi::DrawPixel(uint16_t x, uint16_t y, uint16_t color)
 {
-  uint16_t _x = x + 0;
-  uint16_t _y = y + m_offsetY;
+  const uint16_t _x = x + 0;
+  const uint16_t _y = y + m_offsetY;
 
-  WriteCommand(0x2A);	// set column(x) address
+  WriteCommand(0x2A);  // set column(x) address
   WriteAddress(_x, _x);
 
-  WriteCommand(0x2B);	// set Page(y) address
+  WriteCommand(0x2B);  // set Page(y) address
   WriteAddress(_y, _y);
-  WriteCommand(0x2C);	//	Memory Write
+  WriteCommand(0x2C);  // Memory Write
   WriteData(color);
 }
 
 void TftSpi::DrawBresLine(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color)
 {
-	/* distance between two points */
+  /* distance between two points */
   const uint16_t dx = (x2 > x1) ? x2 - x1 : x1 - x2;
   const uint16_t dy = (y2 > y1) ? y2 - y1 : y1 - y2;
 
@@ -78,30 +78,30 @@ void TftSpi::DrawBresLine(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, ui
     for (uint16_t i = 0; i <= dx; ++i)
     {
       DrawPixel(x1, y1, color);
-			x1 += sx;
-			E += 2 * dy;
-			if ( E >= 0 )
-			{
-				y1 += sy;
-				E -= 2 * dx;
-			}
-		}
-	}
-	else
-	{
-		int16_t E = -dy;
-		for (uint16_t i = 0; i <= dy; ++i)
-		{
+      x1 += sx;
+      E += 2 * dy;
+      if ( E >= 0 )
+      {
+        y1 += sy;
+        E -= 2 * dx;
+      }
+    }
+  }
+  else
+  {
+    int16_t E = -dy;
+    for (uint16_t i = 0; i <= dy; ++i)
+    {
       DrawPixel(x1, y1, color);
-			y1 += sy;
-			E += 2 * dx;
-			if (E >= 0)
-			{
-				x1 += sx;
-				E -= 2 * dy;
-			}
-		}
-	}
+      y1 += sy;
+      E += 2 * dx;
+      if (E >= 0)
+      {
+        x1 += sx;
+        E -= 2 * dy;
+      }
+    }
+  }
 }
 
 void TftSpi::DrawFastBresLine(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color)
@@ -192,11 +192,11 @@ void TftSpi::DrawFillRect(uint16_t topX, uint16_t topY, uint16_t width, uint16_t
   uint16_t _y1 = topY + m_offsetY;
   uint16_t _y2 = _y1 + height - 1;
 
-  WriteCommand(0x2A);	// set column(x) address
+  WriteCommand(0x2A);  // set column(x) address
   WriteAddress(_x1, _x2);
-  WriteCommand(0x2B);	// set Page(y) address
+  WriteCommand(0x2B);  // set Page(y) address
   WriteAddress(_y1, _y2);
-  WriteCommand(0x2C);	//	Memory Write
+  WriteCommand(0x2C);  //  Memory Write
 
   static uint8_t tmpBuf[1024];
   gpio_set_level(m_dcPin, 1);
@@ -233,11 +233,11 @@ void TftSpi::DrawChar(uint16_t x0, uint16_t y0, const char symbol, const VgaFont
   uint16_t _y1 = y0 + m_offsetY;
   uint16_t _y2 = _y1 + height - 1;
 
-  WriteCommand(0x2A);	// set column(x) address
+  WriteCommand(0x2A);  // set column(x) address
   WriteAddress(_x1, _x2);
-  WriteCommand(0x2B);	// set Page(y) address
+  WriteCommand(0x2B);  // set Page(y) address
   WriteAddress(_y1, _y2);
-  WriteCommand(0x2C);	//	Memory Write
+  WriteCommand(0x2C);  //  Memory Write
 
   gpio_set_level(m_dcPin, 1);
   const uint16_t *pixmap = font.BuildPixmap(symbol, fontColor, backColor);
@@ -328,38 +328,38 @@ void TftSpi::WriteAddress(uint16_t addr1, uint16_t addr2)
 
 void TftSpi::Init()
 {
-  WriteCommand(0x01);	//Software Reset
+  WriteCommand(0x01);  //Software Reset
   std::this_thread::sleep_for(std::chrono::milliseconds(150));
 
-  WriteCommand(0x11);	//Sleep Out
+  WriteCommand(0x11);  //Sleep Out
   std::this_thread::sleep_for(std::chrono::milliseconds(255));
-	
-  WriteCommand(0x3A);	//Interface Pixel Format
+
+  WriteCommand(0x3A);  //Interface Pixel Format
   WriteData(static_cast<uint8_t>(0x55));
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
-	
-  WriteCommand(0x36);	//Memory Data Access Control
+  
+  WriteCommand(0x36);  //Memory Data Access Control
   WriteData(static_cast<uint8_t>(0x00));
 
-  WriteCommand(0x2A);	//Column Address Set
+  WriteCommand(0x2A);  //Column Address Set
   WriteData(static_cast<uint8_t>(0x00));
   WriteData(static_cast<uint8_t>(0x00));
   WriteData(static_cast<uint8_t>(0x00));
   WriteData(static_cast<uint8_t>(0xF0));
 
-  WriteCommand(0x2B);	//Row Address Set
+  WriteCommand(0x2B);  //Row Address Set
   WriteData(static_cast<uint8_t>(0x00));
   WriteData(static_cast<uint8_t>(0x00));
   WriteData(static_cast<uint8_t>(0x00));
   WriteData(static_cast<uint8_t>(0xF0));
 
-  WriteCommand(0x21);	//Display Inversion On
+  WriteCommand(0x21);  //Display Inversion On
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
-  WriteCommand(0x13);	//Normal Display Mode On
+  WriteCommand(0x13);  //Normal Display Mode On
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
-  WriteCommand(0x29);	//Display ON
+  WriteCommand(0x29);  //Display ON
   std::this_thread::sleep_for(std::chrono::milliseconds(255));
 
   if (m_blPin != GPIO_NUM_NC)

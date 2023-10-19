@@ -11,7 +11,7 @@ class TftSpi
 {
 public:
   TftSpi(SpiHelper &rSpiHelper
-    , int16_t dcPinNum, int16_t resetPinNum, int16_t blPinNum
+    , uint8_t dcPinNum, uint8_t resetPinNum, uint8_t blPinNum
     , uint16_t width, uint16_t height);
 
   void DrawPixel(uint16_t x, uint16_t y, uint16_t color);
