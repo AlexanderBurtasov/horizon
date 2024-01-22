@@ -6,9 +6,6 @@
 
 namespace
 {
-const uint16_t cWidth = 240;
-const uint16_t cHeight = 280;
-
 const int8_t cMosiPin = 13;
 const int8_t cMisoPin = -1;
 const int8_t cClkPin = 23;
@@ -18,18 +15,30 @@ const int8_t cResetPin = 4;
 const int8_t cBlPin = 22;
 }
 
-const int cFrequencyHz = 40000000;
+const int cFrequencyHz = 40'000'000;
+//const int cFrequencyHz = 26'000'000;
+
+void DoSinTest()
+{
+  SpiHelper spiHelper(SpiHelper::eHSpi, cClkPin, cMosiPin, -1, cCsPin, cFrequencyHz);
+  TftSpi tft{spiHelper, cDcPin, cResetPin, cBlPin, TftSpi::ScreenSize::e240x320, TftSpi::Orientation::ePortrait};
+
+  const auto colorYellow = TftSpi::ColorRgb(255, 255, 0);
+  tft.DrawFillRect(5, 20, tft.GetWidth()-5, tft.GetHeight() / 2, colorYellow);
+}
 
 void DoTftTest()
 {
   SpiHelper spiHelper(SpiHelper::eHSpi, cClkPin, cMosiPin, -1, cCsPin, cFrequencyHz);
-  TftSpi tft{spiHelper, cDcPin, cResetPin, cBlPin, cWidth, cHeight};
+  TftSpi tft{spiHelper, cDcPin, cResetPin, cBlPin, TftSpi::ScreenSize::e240x280, TftSpi::Orientation::eLandscape};
+  const uint16_t cWidth = tft.GetWidth();
+  const uint16_t cHeight = tft.GetHeight();
 
   tft.DrawFillRect(0, 0, cWidth, cHeight, 0x0);
   const auto colorRed = TftSpi::ColorRgb(255, 0, 0);
   const auto colorGreen = TftSpi::ColorRgb(0, 255, 0);
   const auto colorBlue = TftSpi::ColorRgb(0, 0, 255);
-  const auto colorYellow = TftSpi::ColorRgb(200, 200, 0);
+  const auto colorYellow = TftSpi::ColorRgb(255, 255, 0);
 
   VgaFont8x8 vga8x8;
   VgaFont8x16 vga8x16;
@@ -58,4 +67,25 @@ void DoTftTest()
   tft.DrawString(20, 160, "Hells Bells!", vga8x16, colorRed);
 
   std::cout << "DoTftTest(): done" << std::endl;
+}
+
+
+void DoLineTest()
+{
+  SpiHelper spiHelper(SpiHelper::eHSpi, cClkPin, cMosiPin, -1, cCsPin, cFrequencyHz);
+  TftSpi tft{spiHelper, cDcPin, cResetPin, cBlPin, TftSpi::ScreenSize::e240x280, TftSpi::Orientation::ePortrait};
+
+  const uint16_t cWidth = tft.GetWidth();
+  const uint16_t cHeight = tft.GetHeight();
+
+  const auto colorRed = TftSpi::ColorRgb(255, 0, 0);
+
+  tft.DrawFillRect(0, 0, cWidth, cHeight, 0x0);
+  uint16_t x0 = 1;
+  for (uint16_t i = 0; i < 10; ++i)
+  {
+    tft.DrawFastBresLine(x0, 10, x0, cHeight - 11, colorRed);
+
+    x0 += 10;
+  }
 }

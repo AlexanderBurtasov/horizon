@@ -8,13 +8,12 @@
 #include "VgaFont.h"
 
 TftSpi::TftSpi(SpiHelper &rSpiHelper
-  , uint8_t dcPinNum, uint8_t resetPinNum, uint8_t blPinNum
-  , uint16_t width, uint16_t height)
+  , int16_t dcPinNum, int16_t resetPinNum, int16_t blPinNum
+  , ScreenSize screenSize, Orientation orientation)
     : m_rSpiHelper(rSpiHelper)
     , m_dcPin{static_cast<gpio_num_t>(dcPinNum)}
     , m_resetPin{static_cast<gpio_num_t>(resetPinNum)}
     , m_blPin{static_cast<gpio_num_t>(blPinNum)}
-    , m_width{width}, m_height{height}
 {
   // cs == 0 at all time
   m_rSpiHelper.CsLow();
@@ -45,20 +44,20 @@ TftSpi::TftSpi(SpiHelper &rSpiHelper
     gpio_set_level(m_blPin, 0);
   }
 
-  Init();
+  Init(screenSize, orientation);
 }
 
 void TftSpi::DrawPixel(uint16_t x, uint16_t y, uint16_t color)
 {
-  const uint16_t _x = x + 0;
-  const uint16_t _y = y + m_offsetY;
+  uint16_t _x = x + m_offsetX;
+  uint16_t _y = y + m_offsetY;
 
-  WriteCommand(0x2A);  // set column(x) address
+  WriteCommand(0x2A); // set column(x) address
   WriteAddress(_x, _x);
 
-  WriteCommand(0x2B);  // set Page(y) address
+  WriteCommand(0x2B); // set Page(y) address
   WriteAddress(_y, _y);
-  WriteCommand(0x2C);  // Memory Write
+  WriteCommand(0x2C); // Memory Write
   WriteData(color);
 }
 
@@ -80,7 +79,7 @@ void TftSpi::DrawBresLine(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, ui
       DrawPixel(x1, y1, color);
       x1 += sx;
       E += 2 * dy;
-      if ( E >= 0 )
+      if (E >= 0)
       {
         y1 += sy;
         E -= 2 * dx;
@@ -187,21 +186,21 @@ void TftSpi::DrawFastBresLine(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2
 
 void TftSpi::DrawFillRect(uint16_t topX, uint16_t topY, uint16_t width, uint16_t height, uint16_t color)
 {
-  uint16_t _x1 = topX + m_offsetX;
-  uint16_t _x2 = _x1 + width - 1;
-  uint16_t _y1 = topY + m_offsetY;
-  uint16_t _y2 = _y1 + height - 1;
+  const uint16_t _x1 = topX + m_offsetX;
+  const uint16_t _x2 = _x1 + width - 1;
+  const uint16_t _y1 = topY + m_offsetY;
+  const uint16_t _y2 = _y1 + height - 1;
 
   WriteCommand(0x2A);  // set column(x) address
   WriteAddress(_x1, _x2);
   WriteCommand(0x2B);  // set Page(y) address
   WriteAddress(_y1, _y2);
-  WriteCommand(0x2C);  //  Memory Write
+  WriteCommand(0x2C);  // Memory Write
 
   static uint8_t tmpBuf[1024];
   gpio_set_level(m_dcPin, 1);
 
-  uint32_t byteCount = width * height * 2;
+  const uint32_t byteCount = width * height * 2;
   const uint16_t fullCount = byteCount / sizeof(tmpBuf);
 
   const uint32_t restCount = byteCount - fullCount * sizeof(tmpBuf);
@@ -228,16 +227,16 @@ void TftSpi::DrawChar(uint16_t x0, uint16_t y0, const char symbol, const VgaFont
 {
   const auto [width, height] = font.GetDim();
 
-  uint16_t _x1 = x0 + m_offsetX;
-  uint16_t _x2 = _x1 + width - 1;
-  uint16_t _y1 = y0 + m_offsetY;
-  uint16_t _y2 = _y1 + height - 1;
+  const uint16_t _x1 = x0 + m_offsetX;
+  const uint16_t _x2 = _x1 + width - 1;
+  const uint16_t _y1 = y0 + m_offsetY;
+  const uint16_t _y2 = _y1 + height - 1;
 
-  WriteCommand(0x2A);  // set column(x) address
+  WriteCommand(0x2A); // set column(x) address
   WriteAddress(_x1, _x2);
-  WriteCommand(0x2B);  // set Page(y) address
+  WriteCommand(0x2B); // set Page(y) address
   WriteAddress(_y1, _y2);
-  WriteCommand(0x2C);  //  Memory Write
+  WriteCommand(0x2C); // Memory Write
 
   gpio_set_level(m_dcPin, 1);
   const uint16_t *pixmap = font.BuildPixmap(symbol, fontColor, backColor);
@@ -287,6 +286,16 @@ void TftSpi::DrawString(uint16_t x0, uint16_t y0, const char *const str, const V
   }
 }
 
+uint16_t TftSpi::GetWidth() const
+{
+  return m_width;
+}
+
+uint16_t TftSpi::GetHeight() const
+{
+  return m_height;
+}
+
 uint16_t TftSpi::ColorRgb(uint8_t r, uint8_t g, uint8_t b)
 {
   // value reversed already
@@ -326,44 +335,73 @@ void TftSpi::WriteAddress(uint16_t addr1, uint16_t addr2)
   m_rSpiHelper.TransferIntValue(value, sizeof(value));
 }
 
-void TftSpi::Init()
+void TftSpi::Init(ScreenSize screenSize, Orientation orientation)
 {
-  WriteCommand(0x01);  //Software Reset
+  WriteCommand(0x01); // Software Reset
   std::this_thread::sleep_for(std::chrono::milliseconds(150));
 
-  WriteCommand(0x11);  //Sleep Out
+  WriteCommand(0x11); // Sleep Out
   std::this_thread::sleep_for(std::chrono::milliseconds(255));
 
-  WriteCommand(0x3A);  //Interface Pixel Format
+  WriteCommand(0x3A); // Interface Pixel Format
   WriteData(static_cast<uint8_t>(0x55));
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
-  
-  WriteCommand(0x36);  //Memory Data Access Control
-  WriteData(static_cast<uint8_t>(0x00));
 
-  WriteCommand(0x2A);  //Column Address Set
+  WriteCommand(0x36); // Memory Data Access Control
+  const uint8_t regValue = static_cast<uint8_t>(0x0 | (Orientation::ePortrait == orientation ? 0x00 : 0x20 | 0x40));
+  WriteData(regValue);
+
+  WriteCommand(0x2A); // Column Address Set
   WriteData(static_cast<uint8_t>(0x00));
   WriteData(static_cast<uint8_t>(0x00));
   WriteData(static_cast<uint8_t>(0x00));
   WriteData(static_cast<uint8_t>(0xF0));
 
-  WriteCommand(0x2B);  //Row Address Set
+  WriteCommand(0x2B); // Row Address Set
   WriteData(static_cast<uint8_t>(0x00));
   WriteData(static_cast<uint8_t>(0x00));
   WriteData(static_cast<uint8_t>(0x00));
   WriteData(static_cast<uint8_t>(0xF0));
 
-  WriteCommand(0x21);  //Display Inversion On
+  WriteCommand(0x21); // Display Inversion On
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
-  WriteCommand(0x13);  //Normal Display Mode On
+  WriteCommand(0x13); // Normal Display Mode On
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
-  WriteCommand(0x29);  //Display ON
+  WriteCommand(0x29); // Display ON
   std::this_thread::sleep_for(std::chrono::milliseconds(255));
 
   if (m_blPin != GPIO_NUM_NC)
   {
     gpio_set_level(m_blPin, 1);
+  }
+
+  if (ScreenSize::e240x240 == screenSize)
+  {
+    m_offsetX = 0;
+    m_offsetY = 0;
+    m_width = 240;
+    m_height = 280;
+  }
+  else if (ScreenSize::e240x280 == screenSize)
+  {
+    m_offsetX = 0;
+    m_offsetY = 20;
+    m_width = 240;
+    m_height = 280;
+  }
+  else if (ScreenSize::e240x320 == screenSize)
+  {
+    m_offsetX = 0;
+    m_offsetY = 0;
+    m_width = 240;
+    m_height = 320;
+  }
+
+  if (Orientation::eLandscape == orientation)
+  {
+    std::swap(m_width, m_height);
+    std::swap(m_offsetX, m_offsetY);
   }
 }

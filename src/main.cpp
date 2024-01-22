@@ -24,27 +24,14 @@
 #include "st7789.h"
 #include "VgaFont.h"
 
-#define CONFIG_WIDTH  240
-#define CONFIG_HEIGHT 280
-#define CONFIG_MOSI_GPIO 13
-//#define CONFIG_SCLK_GPIO 14
-#define CONFIG_SCLK_GPIO 23
-#define CONFIG_CS_GPIO 16
-#define CONFIG_DC_GPIO 19
-#define CONFIG_RESET_GPIO 4
-#define CONFIG_BL_GPIO 22
-
-#define CONFIG_OFFSETX 0
-#define CONFIG_OFFSETY 20
-
 using namespace std;
-
 
 void DoColorTest(TFT_t *dev, const std::vector<uint16_t> &colors, uint16_t width, uint16_t height);
 void DoPlainView(TFT_t *dev, GuideVector &rGuide, mutex &rMutex);
 void DoFontTest(TFT_t *dev);
 void DoI2cTest();
 void DoI2cTest2();
+void DoMlxTest();
 void DoJoystickTest();
 
 void DoRcControlTest();
@@ -53,6 +40,8 @@ void DoStupid();
 void DoAdc(adc1_channel_t adcEnum);
 
 void DoTftTest();
+void DoLineTest();
+void DoSinTest();
 void DoReceiverTest();
 void DoTransmitterTest();
 
@@ -62,10 +51,12 @@ extern "C"
 void app_main() 
 {
   cout << "Hells Bells!" << endl;
+  //DoMlxTest();
   //DoReceiverTest();
-  DoTransmitterTest();
+  //DoTransmitterTest();
 
-  //DoTftTest();
+  //DoLineTest();
+  DoTftTest();
   //DoTftTestOld();
 
     //DoAdc(ADC1_CHANNEL_7); // pin35
@@ -221,6 +212,20 @@ void DoAdc(adc1_channel_t adcChannel)
 
 }
 
+void DoMlxTest()
+{
+  I2cMasterHelper i2cMaster{I2cMasterHelper::I2cPort::cNumber_0, 21, 22, 400000};
+  int16_t value;
+
+  while (true)
+  {   
+    i2cMaster.ReadBytes(0x33, 0x0400, reinterpret_cast<uint8_t *>(&value), sizeof(value));
+
+    cout << "x: " << (value) << endl;
+    this_thread::sleep_for(chrono::milliseconds(500));
+  }
+}
+
 void DoJoystickTest()
 {
   I2cMasterHelper i2cMaster{I2cMasterHelper::I2cPort::cNumber_0, 21, 22, 100000};
@@ -278,7 +283,7 @@ static esp_err_t i2c_master_read_slave_reg(i2c_port_t i2c_num, uint8_t i2c_addr,
 
 void DoI2cTest()
 {
-    #define I2C_SLAVE_ADDR	0x9
+    #define I2C_SLAVE_ADDR0x9
     #define TIMEOUT_MS 1000
     #define DELAY_MS 1000
     #define I2C_MASTER_TX_BUF_DISABLE 0                           /*!< I2C master doesn't need buffer */

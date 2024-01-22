@@ -10,9 +10,23 @@ class VgaFont;
 class TftSpi
 {
 public:
+  enum class ScreenSize
+  {
+    e240x240
+    , e240x280
+    , e240x320
+  };
+
+  enum class Orientation
+  {
+    eLandscape
+    , ePortrait
+  };
+
+public:
   TftSpi(SpiHelper &rSpiHelper
-    , uint8_t dcPinNum, uint8_t resetPinNum, uint8_t blPinNum
-    , uint16_t width, uint16_t height);
+    , int16_t dcPinNum, int16_t resetPinNum, int16_t blPinNum
+    , ScreenSize screenSize, Orientation orientation);
 
   void DrawPixel(uint16_t x, uint16_t y, uint16_t color);
   void DrawBresLine(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color);
@@ -31,7 +45,7 @@ public:
   uint16_t GetHeight() const;
 
 protected:
-  void Init();
+  void Init(ScreenSize screenSize, Orientation orientation);
 
   void WriteCommand(uint8_t cmd);
 
@@ -52,7 +66,7 @@ protected:
   uint16_t m_width;
   uint16_t m_height;
   uint8_t m_offsetX = 0;
-  uint8_t m_offsetY = 20;
+  uint8_t m_offsetY = 0;
 
 private:
   TftSpi(const TftSpi &) = delete;
