@@ -145,10 +145,10 @@ void spi_master_write_byte(spi_device_handle_t spiHandle, const uint8_t value)
 {
   spi_transaction_t transaction =
   {
-	.flags = SPI_TRANS_USE_TXDATA,
-	.cmd = 0x0,
-	.addr = 0x0,
-	.length = 8
+    .flags = SPI_TRANS_USE_TXDATA,
+    .cmd = 0x0,
+    .addr = 0x0,
+    .length = 8
   };
   transaction.tx_data[0] = value;
   ::spi_device_transmit(spiHandle, &transaction);
