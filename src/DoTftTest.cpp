@@ -66,9 +66,13 @@ void DoTftTest()
 
   tft.DrawString(20, 160, "Hells Bells!", vga8x16, colorRed);
 
+  for (int i = 0; i < 5; ++i)
+  {
+    tft.DrawCircle(i * 10, i * 10, i * 10, colorRed);
+  }
+
   std::cout << "DoTftTest(): done" << std::endl;
 }
-
 
 void DoLineTest()
 {

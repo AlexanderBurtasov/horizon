@@ -223,6 +223,39 @@ void TftSpi::DrawFillRect(uint16_t topX, uint16_t topY, uint16_t width, uint16_t
   }
 }
 
+void TftSpi::DrawCircle(uint16_t x0, uint16_t y0, uint16_t radius, uint16_t color)
+{
+  auto innerFunc = [this, x0, y0, color](int x, int y) -> void
+  {
+    DrawPixel(x + x0, y + y0, color);
+    DrawPixel(x + x0, -y + y0, color);
+    DrawPixel(-x + x0, -y + y0, color);
+    DrawPixel(-x + x0, y + y0, color);
+    DrawPixel(y + x0, x + y0, color);
+    DrawPixel(y + x0, -x + y0, color);
+    DrawPixel(-y + x0, -x + y0, color);
+    DrawPixel(-y + x0, x + y0, color);
+  };
+
+  int x = 0, y = radius, d = 3 - (2 * radius);
+  innerFunc(x, y);
+
+  while (x <= y)
+  {
+    if (d <= 0)
+    {
+      d = d + (4 * x) + 6;
+    }
+    else
+    {
+      d = d + (4 * x) - (4 * y) + 10;
+      y = y - 1;
+    }
+    x = x + 1;
+    innerFunc(x, y);
+  }
+}
+
 void TftSpi::DrawChar(uint16_t x0, uint16_t y0, const char symbol, const VgaFont &font, uint16_t fontColor, uint16_t backColor)
 {
   const auto [width, height] = font.GetDim();

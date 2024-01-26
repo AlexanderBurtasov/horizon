@@ -32,6 +32,7 @@ public:
   void DrawBresLine(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color);
   void DrawFastBresLine(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color);
   void DrawFillRect(uint16_t x0, uint16_t y0, uint16_t width, uint16_t height, uint16_t color);
+  void DrawCircle(uint16_t x0, uint16_t y0, uint16_t radius, uint16_t color);
 
   void DrawChar(uint16_t x0, uint16_t y0, const char symbol, const VgaFont &font, uint16_t fontColor, uint16_t backColor);
   void DrawChar(uint16_t x0, uint16_t y0, const char symbol, const VgaFont &font, uint16_t fontColor);
