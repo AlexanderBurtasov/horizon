@@ -8,7 +8,7 @@
 SpiHelper::SpiHelper(BusType busType, int16_t clockPin, int16_t mosiPin, int16_t misoPin, int16_t csPinNum, int frequencyHz)
   : m_csPin{static_cast<gpio_num_t>(csPinNum)}
 {
-  ::gpio_reset_pin(m_csPin);
+//  ::gpio_reset_pin(m_csPin);
   ::gpio_set_direction(m_csPin, GPIO_MODE_OUTPUT);
 
   ::memset(&m_busConfig, 0, sizeof(m_busConfig));
@@ -39,7 +39,7 @@ SpiHelper::SpiHelper(BusType busType, int16_t clockPin, int16_t mosiPin, int16_t
 	m_deviceConfig.queue_size = 7;
 	m_deviceConfig.mode = 2;
 	m_deviceConfig.flags = SPI_DEVICE_NO_DUMMY;
-  m_deviceConfig.spics_io_num = /*csPin*/-1;
+  m_deviceConfig.spics_io_num = -1;
 
   {
     const auto status = ::spi_bus_add_device(hostId, &m_deviceConfig, &m_spiHandle);

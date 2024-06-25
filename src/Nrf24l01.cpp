@@ -1,5 +1,6 @@
 #include "Nrf24l01.h"
 // std
+#include <bitset>
 #include <thread>
 #include <iostream>
 // prj
@@ -27,8 +28,6 @@ const uint8_t NRF_REG_TX_ADDR = 0x10;
 const uint8_t NRF_REG_RX_PW_P0 = 0x11;
 const uint8_t NRF_REG_FIFO_STATUS = 0x17;
 const uint8_t NRF_REG_DYNPD = 0x1c;
-
-//const uint8_t PAYLOAD_SIZE = 8;
 
 #pragma pack(push, 1)
 struct ConfigRegister
@@ -109,8 +108,8 @@ struct FifoStatusRegister
 using std::cout;
 using std::endl;
 using std::vector;
-using namespace std::this_thread;
-using namespace std::chrono;
+namespace ch = std::chrono;
+namespace th = std::this_thread;
 //-----------------------------------------------------------------------------------------------
 //                                   class Nrf24l01
 //-----------------------------------------------------------------------------------------------
@@ -120,8 +119,8 @@ Nrf24l01::Nrf24l01(SpiHelper &rSpiHelper, int16_t cePin)
 {
   ::gpio_reset_pin(m_cePin);
   ::gpio_set_direction(m_cePin, GPIO_MODE_OUTPUT);
-
   CeLow();
+
   m_rSpiHelper.CsHigh();
 }
 //-----------------------------------------------------------------------------------------------
@@ -223,13 +222,22 @@ void Nrf24l01::OpenReadingPipe(uint8_t pipeNum, const vector<uint8_t> &address, 
 
   // todo!!! payload 32 bytes
   uint8_t addr = NRF_REG_RX_PW_P0 + pipeNum;
-  WriteRegister(addr, /*PAYLOAD_SIZE*/payloadSize);
+  WriteRegister(addr, payloadSize);
 }
 //-----------------------------------------------------------------------------------------------
 void Nrf24l01::OpenWritingPipe(const std::vector<uint8_t> &address, uint8_t payloadSize)
 {
+  WriteRegisterValues(0x0A, address);
   WriteRegisterValues(NRF_REG_TX_ADDR, address);
-  WriteRegister(NRF_RX_ADDR_P0, /*PAYLOAD_SIZE*/payloadSize);
+  WriteRegister(NRF_REG_RX_PW_P0, payloadSize);
+}
+//-----------------------------------------------------------------------------------------------
+void Nrf24l01::StopListening()
+{
+  CeLow();
+
+  FlushRx();
+  FlushTx();
 }
 //-----------------------------------------------------------------------------------------------
 void Nrf24l01::StartListening()
@@ -243,7 +251,7 @@ void Nrf24l01::StartListening()
 
     WriteRegister(NRF_REG_CONFIG, value);
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(150));
+    th::sleep_for(ch::milliseconds(150));
   }
   {
     auto value = ReadRegister(NRF_REG_STATUS);
@@ -259,14 +267,6 @@ void Nrf24l01::StartListening()
 
   CeHigh();
   ::esp_rom_delay_us(130);
-}
-//-----------------------------------------------------------------------------------------------
-void Nrf24l01::StopListening()
-{
-  CeLow();
-
-  FlushRx();
-  FlushTx();
 }
 //-----------------------------------------------------------------------------------------------
 bool Nrf24l01::IsRxDataAvailable(uint8_t pipeNumber)
@@ -293,16 +293,6 @@ void Nrf24l01::FlushRx()
 void Nrf24l01::FlushTx()
 {
   WriteRegisterValues(NRF_CMD_FLUSH_TX, {});
-}
-//-----------------------------------------------------------------------------------------------
-void Nrf24l01::CeLow()
-{
-  ::gpio_set_level(m_cePin, 0);
-}
-//----------------------------------------------------------------------------------------------
-void Nrf24l01::CeHigh()
-{
-  ::gpio_set_level(m_cePin, 1);
 }
 //-----------------------------------------------------------------------------------------------
 uint8_t Nrf24l01::ReadRegister(uint8_t addr)
@@ -367,58 +357,65 @@ void Nrf24l01::Transmitter()
   config->PRIM_RX = 0; // go into TX mode
 
   WriteRegister(NRF_REG_CONFIG, value);
-  ::esp_rom_delay_us(150);
+//  ::esp_rom_delay_us(150);
 }
 //-----------------------------------------------------------------------------------------------
 void Nrf24l01::Send(const vector<uint8_t> &values)
 {
-  Transmitter();
+//  CeLow();
+  FlushTx();
 
   {
-    uint8_t v1 = NRF_CMD_W_TX_PAYLOAD;
+    uint8_t value = ReadRegister(NRF_REG_CONFIG);
+    ConfigRegister *config = reinterpret_cast<ConfigRegister *>(&value);
+    config->PWR_UP = 1;
+    config->PRIM_RX = 0; // go into TX mode
 
-    m_rSpiHelper.CsLow();
-
-    ::esp_rom_delay_us(3);
-
-    m_rSpiHelper.TransferByte(v1);
-
-    for (const auto v : values)
-    {
-      ::esp_rom_delay_us(1);
-      m_rSpiHelper.TransferByte(v);
-    }
-
-    m_rSpiHelper.CsHigh();
+    WriteRegister(NRF_REG_CONFIG, value);
+    ::esp_rom_delay_us(2000);
   }
 
+  m_rSpiHelper.CsLow();
+  m_rSpiHelper.TransferByte(NRF_CMD_W_TX_PAYLOAD);
+  
+  for (const auto v : values)
+  {
+    ::esp_rom_delay_us(1);
+    m_rSpiHelper.TransferByte(v);
+  }
+  m_rSpiHelper.CsHigh();
+
+  ::esp_rom_delay_us(3);
   CeHigh();
-  ::esp_rom_delay_us(15);
+
+  ::esp_rom_delay_us(30000);
+
   CeLow();
-
-  // while (true)
-  // {
-  //   const uint8_t value = ReadRegister(NRF_REG_STATUS);
-  //   const RfStatusRegister *status = reinterpret_cast<const RfStatusRegister *>(&value);
-  //   if (status->MAX_RT == 0 && status->TX_DS == 0)
-  //     break;
-    
-  //   ::ets_delay_us(15);
-  // }
-
-  ::esp_rom_delay_us(30);
-
-  uint8_t value = ReadRegister(NRF_REG_STATUS);
-  RfStatusRegister *status = reinterpret_cast<RfStatusRegister *>(&value);
-  status->RX_DR = 1;
-  status->MAX_RT = 1;
-  status->TX_DS = 1;
-  WriteRegister(NRF_REG_STATUS, value);
+  uint8_t count = 0;
+  while (true)
+  {
+    const uint8_t value = ReadRegister(NRF_REG_STATUS);
+    const RfStatusRegister *status = reinterpret_cast<const RfStatusRegister *>(&value); 
+    if (status->MAX_RT != 0 || status->TX_DS != 0 || count > 10)
+      break;
+    ::esp_rom_delay_us(25);
+    ++count;
+  }
 
   {
-    value = ReadRegister(NRF_REG_CONFIG);
+    uint8_t value = ReadRegister(NRF_REG_STATUS);
+    RfStatusRegister *status = reinterpret_cast<RfStatusRegister *>(&value);
+    status->RX_DR = 0;
+    status->MAX_RT = 1;
+    status->TX_DS = 1;
+    WriteRegister(NRF_REG_STATUS, value);
+  }
+
+  { // sleep tx mode
+    uint8_t value = ReadRegister(NRF_REG_CONFIG);
     ConfigRegister *config = reinterpret_cast<ConfigRegister *>(&value);
     config->PWR_UP = 0;
+    config->PRIM_RX = 0;
 
     WriteRegister(NRF_REG_CONFIG, value);
   }
@@ -446,11 +443,11 @@ void Nrf24l01::DumpRegisters()
     cout << endl;
   }
 
-   for (uint8_t addr = 0xC; addr <= 0x17; ++addr)
-   {
-     uint8_t value = ReadRegister(addr);
-     cout << "[0x" << static_cast<size_t>(addr) << "]: 0x" << /*bitset<8>*/static_cast<size_t>(value) << endl;
-   }
+  for (uint8_t addr = 0xC; addr <= 0x17; ++addr)
+  {
+    uint8_t value = ReadRegister(addr);
+    cout << "[0x" << static_cast<size_t>(addr) << "]: 0x" << /*bitset<8>*/static_cast<size_t>(value) << endl;
+  }
 }
 //---------------------------------------------------------------------------
 void Nrf24l01::ReadRegisterValues(uint8_t addr, vector<uint8_t> &values)
@@ -489,5 +486,15 @@ void Nrf24l01::WriteRegisterValues(uint8_t addr, const vector<uint8_t> &values)
   }
 
   m_rSpiHelper.CsHigh();
+}
+//-----------------------------------------------------------------------------------------------
+void Nrf24l01::CeLow()
+{
+  ::gpio_set_level(m_cePin, 0);
+}
+//----------------------------------------------------------------------------------------------
+void Nrf24l01::CeHigh()
+{
+  ::gpio_set_level(m_cePin, 1);
 }
 //-----------------------------------------------------------------------------------------------

@@ -11,9 +11,9 @@ public:
 
   ~TimeMeter()
   {
-      const auto endPoint = std::chrono::system_clock::now();
-      std::cout << m_title << std::chrono::duration_cast<std::chrono::milliseconds>(endPoint - m_startPoint).count()
-          << std::endl;
+    const auto endPoint = std::chrono::system_clock::now();
+    std::cout << m_title << std::chrono::duration_cast<std::chrono::milliseconds>(endPoint - m_startPoint).count()
+      << std::endl;
   }
 
 private:

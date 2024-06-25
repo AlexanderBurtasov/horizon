@@ -1,5 +1,11 @@
 #pragma once
 
+enum class Version : uint8_t
+{
+  eNone = 0
+  , eSimpleOne = 0
+};
+
 struct GuideVector
 {
   int8_t x0 = 0;
